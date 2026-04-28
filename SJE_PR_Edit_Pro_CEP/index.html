@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>SJE PR Edit Pro</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #222222;
+            color: #c8c8c8;
+            font-family: 'Adobe Clean', 'Segoe UI', sans-serif;
+            font-size: 12px;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* 섹션 */
+        .section {
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid #2a2a2a;
+            gap: 8px;
+        }
+
+        .section-header .accent {
+            width: 2px;
+            height: 12px;
+            border-radius: 1px;
+            flex-shrink: 0;
+        }
+
+        .section-header span {
+            font-size: 10px;
+            font-weight: 700;
+            color: #999;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+
+        /* 버튼 공통 */
+        .btn {
+            display: block;
+            width: calc(100% - 24px);
+            margin: 0 12px;
+            padding: 7px 12px;
+            border: none;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: filter 0.15s;
+            letter-spacing: 0.2px;
+        }
+
+        .btn:hover  { filter: brightness(1.15); }
+        .btn:active { filter: brightness(0.9); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+        .btn-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            pointer-events: none;
+        }
+        .btn-inner span { flex: 1; text-align: center; }
+        .btn-key {
+            font-size: 9px;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 0.3px;
+            min-width: 22px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .btn-razor  { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-marker { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-switch { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-angle  { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-img    { background: #232323; color: #b89a50; border: 1px solid #4a3e20; }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid #2a2a2a;
+            margin: 4px 12px;
+        }
+
+        /* 버튼 행 */
+        .btn-row {
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        /* 섹션별 배경색 조정 */
+        #section-razor    { background: transparent; }
+        #section-marker   { background: transparent; }
+        #section-switch   { background: transparent; }
+        #section-image    { background: transparent; }
+
+        /* 앵글 3버튼 행 */
+        .angle-row {
+            display: flex;
+            gap: 6px;
+            padding: 0 12px;
+        }
+
+        .angle-row .btn {
+            width: auto;
+            flex: 1;
+            margin: 0;
+        }
+
+        /* 시작 번호 입력 */
+        .slide-num-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 12px;
+        }
+
+        .slide-num-row label {
+            font-size: 10px;
+            color: #777;
+            white-space: nowrap;
+        }
+
+        .slide-num-row input[type="number"] {
+            width: 52px;
+            background: #252525;
+            border: 1px solid #3a3a3a;
+            border-radius: 2px;
+            color: #e8e8e8;
+            font-size: 11px;
+            padding: 4px 7px;
+            outline: none;
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .slide-num-row input[type="number"]::-webkit-inner-spin-button,
+        .slide-num-row input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+        }
+
+        .slide-num-row input[type="number"]:focus {
+            border-color: #555;
+        }
+
+        /* 푸터 */
+        .footer {
+            padding: 8px 12px;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer span {
+            font-size: 10px;
+            color: #555;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- 섹션 1: 자르기 -->
+    <div class="section" id="section-razor">
+        <div class="section-header">
+            <div class="accent" style="background:#555;"></div>
+            <span>자르기</span>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-img" id="auto-razor-btn"><span class="btn-inner"><span>자막 위치로 자동 자르기</span></span></button>
+            <button class="btn btn-razor" id="razor-btn"><span class="btn-inner"><span>현재 헤드 위치 자르기</span><span class="btn-key">~</span></span></button>
+        </div>
+    </div>
+
+    <!-- 섹션 2: 슬라이드 마커 -->
+    <div class="section" id="section-marker">
+        <div class="section-header">
+            <div class="accent" style="background:#555;"></div>
+            <span>슬라이드 마커</span>
+        </div>
+        <div class="btn-row">
+            <div class="slide-num-row">
+                <label>시작 번호</label>
+                <input type="number" id="slide-start-input" value="1" min="1" />
+            </div>
+            <button class="btn btn-marker" id="razor-marker-btn"><span class="btn-inner"><span>[Slide 1]</span><span class="btn-key">F1</span></span></button>
+            <div class="angle-row">
+                <button class="btn btn-angle" id="angle-front-btn"><span class="btn-inner"><span>정면</span><span class="btn-key">F2</span></span></button>
+                <button class="btn btn-angle" id="angle-right-btn"><span class="btn-inner"><span>우측</span><span class="btn-key">F3</span></span></button>
+                <button class="btn btn-angle" id="angle-left-btn"><span class="btn-inner"><span>좌측</span><span class="btn-key">F4</span></span></button>
+            </div>
+            <hr class="section-divider">
+            <div class="slide-num-row">
+                <label>이미지 번호</label>
+                <input type="number" id="img-start-input" value="1" min="1" />
+            </div>
+            <button class="btn btn-img" id="img-marker-btn"><span class="btn-inner"><span>[#1]</span><span class="btn-key">F5</span></span></button>
+        </div>
+    </div>
+
+    <!-- 섹션 3: 앵글 스위칭 -->
+    <div class="section" id="section-switch">
+        <div class="section-header">
+            <div class="accent" style="background:#555;"></div>
+            <span>앵글 스위칭</span>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-switch" id="switch-btn"><span class="btn-inner"><span>앵글 자동 스위칭</span><span class="btn-key">F6</span></span></button>
+        </div>
+    </div>
+
+    <!-- 섹션 4: 이미지 자동 배치 -->
+    <div class="section" id="section-image">
+        <div class="section-header">
+            <div class="accent" style="background:#555;"></div>
+            <span>이미지 자동 배치</span>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-img" id="image-btn"><span class="btn-inner"><span>이미지 자동 배치</span><span class="btn-key">F7</span></span></button>
+        </div>
+    </div>
+
+
+    <div class="footer">
+        <span>V1.2 · SJE PR Edit Pro</span>
+        <button id="hotkey-toggle" style="
+            background:#333; color:#666; border:1px solid #444;
+            border-radius:2px; font-size:10px; font-weight:600;
+            padding:2px 7px; cursor:pointer; letter-spacing:0.2px;
+        ">단축키 OFF</button>
+        <span id="license-status" style="color:#666;"></span>
+    </div>
+
+    <script src="./CSInterface.js"></script>
+    <script>
+        var csInterface = new CSInterface();
+        var slideNum = 1;
+        var imgNum = 1;
+
+        // =====================================================
+        //  라이선스 설정
+        // =====================================================
+        var LICENSE_SERVER_URL = "https://script.google.com/macros/s/AKfycbzx9K_0KmVZph-O_MyEXAH7AbKWOwL5zu5Z3_re2b2w6PoZJnClGPipoU9Wah_dhNaL/exec";
+        var TRIAL_DAYS = 7;
+        var _authPassed = false;
+        var _hwid = null;
+        var _authState = null; // 패널 로드 시 서버에서 받은 인증 상태 캐시
+
+        function updateLicenseStatus(text, color) {
+            var el = document.getElementById('license-status');
+            if (el) { el.textContent = text; el.style.color = color || '#666'; }
+        }
+
+        function getExpiryDisplay(expiryDate, plan) {
+            if (!expiryDate) return { text: '라이선스 활성', color: '#666' };
+            try {
+                var expiry  = new Date(expiryDate);
+                var now     = new Date();
+                var days    = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+                var planStr = plan === 'yearly' ? '연간' : '월간';
+                var dateStr = expiry.toISOString().slice(0, 10);
+                if (days < 0 && days >= -7) return { text: '⚠ 만료 — 유예기간 ' + (7 + days) + '일 남음', color: '#e0a030' };
+                if (days < -7)             return { text: '✕ 구독 만료', color: '#e06060' };
+                if (days <= 7)             return { text: '⚠ ' + planStr + ' — 만료 ' + days + '일 전', color: '#e0a030' };
+                if (days <= 30)            return { text: '△ ' + planStr + ' — 만료 ' + days + '일 전', color: '#e0a030' };
+                return { text: planStr + ' 구독 · ' + dateStr, color: '#666' };
+            } catch (e) { return { text: '라이선스 활성', color: '#666' }; }
+        }
+
+        function checkExpiryAndNotify(state) {
+            if (!state.expiry_date) return true;
+            var expiry = new Date(state.expiry_date);
+            var now    = new Date();
+            var days   = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+            var isYearly = state.plan === 'yearly';
+
+            if (days > 30) return true;
+            if (days > 7) {
+                if (isYearly && !state.notified_30d) {
+                    alert('📅 구독 만료까지 ' + days + '일 남았습니다.\n기간 내 갱신해주세요.');
+                    state.notified_30d = true;
+                    saveStateToLocal(state);
+                }
+                return true;
+            }
+            if (days > 0) {
+                if (!state.notified_7d) {
+                    alert('⚠️ 구독 만료까지 ' + days + '일 남았습니다!\n빠른 시일 내 갱신해주세요.');
+                    state.notified_7d = true;
+                    saveStateToLocal(state);
+                }
+                return true;
+            }
+            if (days >= -7) {
+                alert('⚠️ 구독이 만료되었습니다.\n유예기간: ' + (7 + days) + '일 남았습니다.\n갱신해주세요.');
+                return true;
+            }
+            alert('❌ 구독 유예기간이 종료되었습니다.\n라이선스 키를 다시 입력해주세요.');
+            csInterface.evalScript('deleteLocalLicense()');
+            return false;
+        }
+
+        function saveKeyToLocal(hwid, key, expiry_date, plan) {
+            var data = { hwid: hwid, key: key, expiry_date: expiry_date || '', plan: plan || '' };
+            csInterface.evalScript('saveLocalLicense(' + JSON.stringify(JSON.stringify(data)) + ')');
+        }
+
+        // Node.js PowerShell로 WMI UUID 가져오기
+        function getHWID() {
+            return new Promise(function (resolve) {
+                if (_hwid) { resolve(_hwid); return; }
+                try {
+                    var exec = cep_node.require('child_process').exec;
+                    exec('powershell -NoProfile -Command "(Get-WmiObject -Class Win32_ComputerSystemProduct).UUID"',
+                        { timeout: 5000 },
+                        function (err, stdout) {
+                            var uuid = stdout ? stdout.trim() : '';
+                            if (uuid && uuid.length > 10) {
+                                _hwid = uuid.toUpperCase();
+                            } else {
+                                try {
+                                    var os = cep_node.require('os');
+                                    _hwid = 'FALLBACK_' + os.hostname() + '_' + (process.env.USERNAME || 'UNKNOWN');
+                                } catch (oe) {
+                                    _hwid = 'FALLBACK_' + (process.env.COMPUTERNAME || 'UNKNOWN') + '_' + (process.env.USERNAME || 'UNKNOWN');
+                                }
+                            }
+                            resolve(_hwid);
+                        }
+                    );
+                } catch (e) {
+                    try {
+                        var os = cep_node.require('os');
+                        _hwid = 'FALLBACK_' + os.hostname() + '_' + (process.env.USERNAME || 'UNKNOWN');
+                    } catch (e2) {
+                        _hwid = 'FALLBACK_' + (process.env.COMPUTERNAME || 'UNKNOWN') + '_' + (process.env.USERNAME || 'UNKNOWN');
+                    }
+                    resolve(_hwid);
+                }
+            });
+        }
+
+        // PowerShell 임시 ps1 방식 서버 통신
+        function serverFetch(action, params) {
+            return new Promise(function (resolve, reject) {
+                try {
+                    var fs   = cep_node.require('fs');
+                    var exec = cep_node.require('child_process').exec;
+                    var os   = cep_node.require('os');
+                    var path = cep_node.require('path');
+
+                    var tmpDir  = os.tmpdir();
+                    var id      = Date.now();
+                    var ps1Path = path.join(tmpDir, 'pprs_' + id + '.ps1');
+                    var txtPath = path.join(tmpDir, 'pprs_' + id + '.txt');
+
+                    var qs = 'action=' + encodeURIComponent(action);
+                    if (params) {
+                        Object.keys(params).forEach(function (k) {
+                            qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+                        });
+                    }
+                    var url = LICENSE_SERVER_URL + '?' + qs;
+
+                    var ps1 = '[System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true};\n' +
+                              '$client = New-Object System.Net.WebClient;\n' +
+                              '$client.Encoding = [System.Text.Encoding]::UTF8;\n' +
+                              '$url = "' + url + '";\n' +
+                              'try {\n' +
+                              '    $content = $client.DownloadString($url);\n' +
+                              '    [System.IO.File]::WriteAllText("' + txtPath.replace(/\\/g, '/') + '", $content, [System.Text.Encoding]::UTF8);\n' +
+                              '} catch {\n' +
+                              '    "ERROR: $_" | Out-File "' + txtPath.replace(/\\/g, '/') + '" -Encoding UTF8;\n' +
+                              '}';
+
+                    fs.writeFileSync(ps1Path, ps1, 'utf8');
+
+                    exec('powershell -ExecutionPolicy Bypass -File "' + ps1Path + '"',
+                        { timeout: 15000 },
+                        function () {
+                            setTimeout(function () {
+                                try {
+                                    var raw = fs.readFileSync(txtPath, 'utf8')
+                                                .replace(/^\uFEFF/, '').trim();
+                                    fs.unlinkSync(txtPath);
+                                    try { fs.unlinkSync(ps1Path); } catch (e) {}
+                                    if (!raw) { reject(new Error('empty result')); return; }
+                                    try { resolve(JSON.parse(raw)); }
+                                    catch (e) { reject(e); }
+                                } catch (e) {
+                                    reject(new Error('txt not found'));
+                                }
+                            }, 300);
+                        }
+                    );
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
+        // 단축키 전용 — 인증 완료 후 콜백
+        function authOnly(onAuth) {
+            if (_authPassed) { onAuth(); return; }
+            // 패널 로드 인증이 아직 진행 중이면 잠시 대기
+            setTimeout(function () {
+                if (_authPassed) { onAuth(); return; }
+                // 인증 실패 상태 → 재인증 시도
+                doInitAuth(function () { if (_authPassed) onAuth(); });
+            }, 500);
+        }
+
+        // 패널 로드 시 인증 완료 후 _authPassed = true → 이후 모든 버튼/단축키 바로 실행
+        function runWithAuth(jsxCall, btn, busyText, idleText, onDone) {
+            if (_authPassed) {
+                runJsx(jsxCall, btn, busyText, idleText, onDone);
+                return;
+            }
+            var origText = getBtnText(btn);
+            getHWID().then(function (hwid) {
+                // 이미 체험판 이메일 등록된 상태(만료 등) → 라이선스 입력창만
+                if (_authState && _authState.email) {
+                    showLicenseInput(hwid, function (ok) {
+                        if (ok) { _authPassed = true; runJsx(jsxCall, btn, busyText, idleText, onDone); }
+                        else { setBtnText(btn, origText); btn.disabled = false; }
+                    });
+                } else {
+                    // 완전 신규 → 체험판/라이선스 선택 UI
+                    showTrialEmailUI(hwid, jsxCall, btn, busyText, idleText, origText, onDone);
+                }
+            });
+        }
+
+        // 서버에서 인증 상태 확인 — 패널 로드 시 1회 실행
+        function doInitAuth(onDone) {
+            getHWID().then(function (hwid) {
+                csInterface.evalScript('getAuthState("' + hwid + '")', function (res) {
+                    var state;
+                    try { state = JSON.parse(res); } catch (e) { state = {}; }
+                    _authState = state;
+
+                    // 정식 라이선스 키 있음 → 서버로 구독 상태 확인
+                    if (state.licensed) {
+                        serverFetch('check_subscription', { hwid: hwid, key: state.key })
+                        .then(function (subRes) {
+                            if (subRes.status === 'active') {
+                                var serverState = { expiry_date: subRes.expiry_date || '', plan: subRes.plan || state.plan };
+                                var disp = getExpiryDisplay(serverState.expiry_date, serverState.plan);
+                                updateLicenseStatus(disp.text, disp.color);
+                                if (!checkExpiryAndNotify(serverState)) { if (onDone) onDone(); return; }
+                                _authPassed = true;
+                            } else if (subRes.status === 'grace_period') {
+                                updateLicenseStatus('⚠ 유예기간 ' + subRes.grace_days_left + '일 남음', '#e0a030');
+                                alert('⚠️ 구독이 만료되었습니다.\n유예기간: ' + subRes.grace_days_left + '일 남았습니다.');
+                                _authPassed = true;
+                            } else if (subRes.status === 'expired') {
+                                alert('❌ 구독이 만료되었습니다.\n라이선스 키를 다시 입력해주세요.');
+                                csInterface.evalScript('deleteLocalLicense()');
+                                updateLicenseStatus('구독 만료', '#e06060');
+                            } else {
+                                updateLicenseStatus('인증 실패', '#e06060');
+                            }
+                            if (onDone) onDone();
+                        })
+                        .catch(function () {
+                            // 오프라인 → 로컬 만료일로 폴백
+                            var disp = getExpiryDisplay(state.expiry_date, state.plan);
+                            updateLicenseStatus(disp.text + ' (오프라인)', '#888');
+                            if (checkExpiryAndNotify(state)) _authPassed = true;
+                            if (onDone) onDone();
+                        });
+                        return;
+                    }
+
+                    // 체험판 이메일 있음 → 서버로 체험판 상태 확인
+                    if (state.email) {
+                        serverFetch('trial_check', { email: state.email, hwid: hwid })
+                        .then(function (trialRes) {
+                            handleTrialResult(trialRes, hwid, state.email, null, null, '', '', '', onDone);
+                        })
+                        .catch(function () {
+                            updateLicenseStatus('체험판 (오프라인)', '#888');
+                            _authPassed = true;
+                            if (onDone) onDone();
+                        });
+                        return;
+                    }
+
+                    // 아무것도 없음 → 딜레이 후 웰컴 UI 표시
+                    updateLicenseStatus('미인증', '#666');
+                    setTimeout(function () {
+                        showTrialEmailUI(hwid, null, null, '', '', '', onDone);
+                    }, 800);
+                });
+            });
+        }
+
+        // email: 이미 알고 있는 이메일 (trial_check 응답 처리용)
+        function handleTrialResult(trialRes, hwid, email, jsxCall, btn, busyText, idleText, origText, onDone) {
+            function resetBtn() { if (btn && origText !== '') { setBtnText(btn, origText); btn.disabled = false; } }
+            function proceed() {
+                if (jsxCall) { runJsx(jsxCall, btn, busyText, idleText, onDone); }
+                else if (typeof onDone === 'function') { onDone(); }
+            }
+
+            if (trialRes.status === 'trial_active' || trialRes.status === 'trial_already_active') {
+                var remaining = trialRes.remaining || trialRes.daysLeft || 0;
+                // 이메일만 로컬 저장 (다음 로드 시 trial_check용)
+                var data = { hwid: hwid, email: email, plan: 'trial' };
+                csInterface.evalScript('saveLocalLicense(' + JSON.stringify(JSON.stringify(data)) + ')');
+                updateLicenseStatus('체험판 · ' + remaining + '일 남음', '#6abf6a');
+                _authPassed = true;
+                proceed();
+
+            } else if (trialRes.status === 'trial_expired') {
+                updateLicenseStatus('체험판 만료', '#e05555');
+                alert('⏰ 체험 기간이 만료되었습니다. 라이선스 키를 등록하세요.');
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+
+            } else if (trialRes.status === 'trial_not_found' || trialRes.status === 'trial_email_used') {
+                // 이메일이 없거나 다른 기기 사용 → 라이선스 입력
+                if (trialRes.status === 'trial_email_used') {
+                    alert('이미 다른 기기에서 체험판을 사용한 이메일입니다.\n라이선스 키를 입력하세요.');
+                }
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+
+            } else {
+                var errMsg = trialRes.message ? (trialRes.status + ': ' + trialRes.message) : trialRes.status;
+                alert('인증 오류: ' + errMsg + '\n\n라이선스 키를 입력하거나, 인터넷 연결 후 다시 시도하세요.');
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+            }
+        }
+
+        // 이메일 입력 → 코드 발송 → 코드 확인 UI (UXP 웰컴 모달 대응)
+        function showTrialEmailUI(hwid, jsxCall, btn, busyText, idleText, origText, onDone) {
+            function resetBtn() { if (btn && origText !== '') { setBtnText(btn, origText); btn.disabled = false; } }
+            function proceed() {
+                if (jsxCall) { runJsx(jsxCall, btn, busyText, idleText, onDone); }
+                else if (typeof onDone === 'function') { onDone(); }
+            }
+
+            // Step 1: 체험판 or 라이선스 선택
+            var choice = confirm(
+                'SJE PR Edit Pro에 오신 것을 환영합니다!\n\n' +
+                '확인: ' + TRIAL_DAYS + '일 무료 체험 시작\n' +
+                '취소: 라이선스 키 입력'
+            );
+            if (!choice) {
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+                return;
+            }
+
+            // Step 2: 이메일 입력
+            var email = prompt('이메일 주소를 입력하세요.\n인증 코드를 발송합니다.');
+            if (!email || !email.trim()) { resetBtn(); return; }
+            email = email.trim();
+
+            // 코드 발송
+            serverFetch('trial_request_code', { email: email, hwid: hwid })
+            .then(function (res) {
+                if (res.status === 'code_sent') {
+                    // Step 3: 코드 입력
+                    var code = prompt('[' + email + '] 로 발송된 6자리 인증 코드를 입력하세요.');
+                    if (!code || !code.trim()) { resetBtn(); return; }
+
+                    serverFetch('trial_verify_code', { email: email, hwid: hwid, code: code.trim() })
+                    .then(function (vRes) {
+                        if (vRes.status === 'verified' || vRes.status === 'trial_already_active') {
+                            var remaining = vRes.remaining || 7;
+                            var data = { hwid: hwid, email: email, plan: 'trial' };
+                            csInterface.evalScript('saveLocalLicense(' + JSON.stringify(JSON.stringify(data)) + ')');
+                            updateLicenseStatus('체험판 · ' + remaining + '일 남음', '#6abf6a');
+                            _authPassed = true;
+                            proceed();
+                        } else if (vRes.status === 'invalid_code') {
+                            alert('인증 코드가 올바르지 않습니다.');
+                            resetBtn();
+                        } else if (vRes.status === 'code_expired') {
+                            alert('코드가 만료되었습니다. 다시 시도하세요.');
+                            resetBtn();
+                        } else {
+                            alert('오류: ' + (vRes.message || vRes.status));
+                            resetBtn();
+                        }
+                    })
+                    .catch(function () { alert('서버 연결 실패'); resetBtn(); });
+
+                } else if (res.status === 'trial_already_active') {
+                    // 같은 이메일+HWID → 바로 통과
+                    var data = { hwid: hwid, email: email, plan: 'trial' };
+                    csInterface.evalScript('saveLocalLicense(' + JSON.stringify(JSON.stringify(data)) + ')');
+                    updateLicenseStatus('체험판', '#6abf6a');
+                    _authPassed = true;
+                    proceed();
+                } else if (res.status === 'trial_email_used') {
+                    alert('이미 다른 기기에서 체험판을 사용한 이메일입니다.\n라이선스 키를 입력하세요.');
+                    showLicenseInput(hwid, function (ok) {
+                        if (ok) { _authPassed = true; proceed(); }
+                        else resetBtn();
+                    });
+                } else if (res.status === 'code_already_sent') {
+                    // 이미 코드가 발송된 상태 → 바로 코드 입력으로
+                    var code2 = prompt('이미 코드가 발송되어 있습니다.\n[' + email + '] 로 발송된 6자리 코드를 입력하세요.');
+                    if (!code2 || !code2.trim()) { resetBtn(); return; }
+                    serverFetch('trial_verify_code', { email: email, hwid: hwid, code: code2.trim() })
+                    .then(function (vRes) {
+                        if (vRes.status === 'verified' || vRes.status === 'trial_already_active') {
+                            var remaining = vRes.remaining || 7;
+                            var data = { hwid: hwid, email: email, plan: 'trial' };
+                            csInterface.evalScript('saveLocalLicense(' + JSON.stringify(JSON.stringify(data)) + ')');
+                            updateLicenseStatus('체험판 · ' + remaining + '일 남음', '#6abf6a');
+                            _authPassed = true;
+                            proceed();
+                        } else {
+                            alert('오류: ' + (vRes.message || vRes.status));
+                            resetBtn();
+                        }
+                    })
+                    .catch(function () { alert('서버 연결 실패'); resetBtn(); });
+                } else {
+                    alert('오류: ' + (res.message || res.status));
+                    resetBtn();
+                }
+            })
+            .catch(function () { alert('서버 연결 실패'); resetBtn(); });
+        }
+
+        function showLicenseInput(hwid, callback) {
+            var key = prompt('구매한 라이선스 키를 입력하세요:');
+            if (!key) { callback(false); return; }
+            serverFetch('activate', { hwid: hwid, key: key.trim() }).then(function (res) {
+                if (res.status === 'activated' || res.status === 'already_active') {
+                    var disp = getExpiryDisplay(res.expiry_date || '', res.plan || '');
+                    updateLicenseStatus(disp.text, disp.color);
+                    saveKeyToLocal(hwid, key.trim(), res.expiry_date || '', res.plan || '');
+                    csInterface.evalScript('getAuthState("' + hwid + '")', function () {
+                        alert('✅ 라이선스 활성화 완료!'); callback(true);
+                    });
+                } else if (res.status === 'invalid_key') {
+                    alert('❌ 유효하지 않은 키입니다.'); callback(false);
+                } else if (res.status === 'max_reached') {
+                    alert('❌ 최대 등록 기기 수(' + res.max + '대)를 초과했습니다.'); callback(false);
+                } else {
+                    alert('오류: ' + (res.message || res.status)); callback(false);
+                }
+            }).catch(function () { alert('서버 연결 실패'); callback(false); });
+        }
+
+        // 패널 로드 시 서버 인증 1회 실행
+        doInitAuth(null);
+
+        function updateMarkerBtn() {
+            setBtnText(document.getElementById('razor-marker-btn'), '[Slide ' + slideNum + ']');
+        }
+
+        function updateImgBtn() {
+            setBtnText(document.getElementById('img-marker-btn'), '[#' + imgNum + ']');
+        }
+
+        // 슬라이드 시작 번호 변경
+        document.getElementById('slide-start-input').oninput = function () {
+            var v = parseInt(this.value, 10);
+            if (!isNaN(v) && v >= 1) {
+                slideNum = v;
+                updateMarkerBtn();
+            }
+        };
+
+        // 이미지 시작 번호 변경
+        document.getElementById('img-start-input').oninput = function () {
+            var v = parseInt(this.value, 10);
+            if (!isNaN(v) && v >= 1) {
+                imgNum = v;
+                updateImgBtn();
+            }
+        };
+
+        function getBtnText(btn) {
+            var sp = btn.querySelector('.btn-inner > span:first-child');
+            return sp ? sp.innerText : btn.innerText;
+        }
+        function setBtnText(btn, text) {
+            var sp = btn.querySelector('.btn-inner > span:first-child');
+            if (sp) { sp.innerText = text; } else { btn.innerText = text; }
+        }
+
+        // onDone: JSX 완료 후 추가 작업 콜백 (선택)
+        function runJsx(jsxCall, btn, busyText, idleText, onDone) {
+            setBtnText(btn, busyText);
+            btn.disabled  = true;
+            csInterface.evalScript(jsxCall, function () {
+                setBtnText(btn, idleText);
+                btn.disabled  = false;
+                if (typeof onDone === 'function') onDone();
+            });
+        }
+
+        // 자막 기반 자동 자르기
+        document.getElementById('auto-razor-btn').onclick = function () {
+            runWithAuth('$._PPP_.autoRazorTracks()', this,
+                '⏳ 처리 중...', '자막 위치로 자동 자르기');
+        };
+
+        // 자르기만
+        document.getElementById('razor-btn').onclick = function () {
+            runWithAuth('$._PPP_.razorAtPlayhead()', this,
+                '자르는 중...', '현재 헤드 위치 자르기');
+        };
+
+        // 자르기 + 마커 (완료 후 slideNum +1, imgNum 초기화)
+        document.getElementById('razor-marker-btn').onclick = function () {
+            var btn = this;
+            var markerName = '[Slide ' + slideNum + ']';
+            var jsxCall = '$._PPP_.razorAndMark(' + JSON.stringify(markerName) + ')';
+            var idleText = '[Slide ' + slideNum + ']';
+            runWithAuth(jsxCall, btn, '⏳ 처리 중...', idleText, function () {
+                slideNum++;
+                document.getElementById('slide-start-input').value = slideNum;
+                updateMarkerBtn();
+                imgNum = 1;
+                document.getElementById('img-start-input').value = imgNum;
+                updateImgBtn();
+            });
+        };
+
+        // 이미지 번호 버튼 (완료 후 imgNum +1)
+        document.getElementById('img-marker-btn').onclick = function () {
+            var btn = this;
+            var imgTag = '#' + imgNum;
+            var jsxCall = '$._PPP_.appendImgToLastMarker(' + JSON.stringify(imgTag) + ')';
+            var idleText = '[#' + imgNum + ']';
+            runWithAuth(jsxCall, btn, '⏳ 처리 중...', idleText, function () {
+                imgNum++;
+                document.getElementById('img-start-input').value = imgNum;
+                updateImgBtn();
+            });
+        };
+
+        // 앵글 태그 버튼
+        ['front', 'left', 'right'].forEach(function (key) {
+            var nameMap = { front: '정면', left: '좌측', right: '우측' };
+            var angleName = nameMap[key];
+            document.getElementById('angle-' + key + '-btn').onclick = function () {
+                runWithAuth('$._PPP_.appendAngleToLastMarker(' + JSON.stringify(angleName) + ')',
+                    this, '⏳...', angleName);
+            };
+        });
+
+        // 앵글 스위칭
+        document.getElementById('switch-btn').onclick = function () {
+            runWithAuth('$._PPP_.autoSwitchAngle()', this,
+                '⏳ 스위칭 중...', '앵글 자동 스위칭');
+        };
+
+        // 이미지 자동 배치
+        document.getElementById('image-btn').onclick = function () {
+            runWithAuth('$._PPP_.autoPlaceImages()', this,
+                '배치 중...', '이미지 자동 배치');
+        };
+
+        // =====================================================
+        //  전역 단축키 (PowerShell 백그라운드 → 파일 폴링)
+        //  F1 : [Slide N] 마커
+        //  F2 : 좌측
+        //  F3 : 정면
+        //  F4 : 우측
+        //  F5 : [#N] 이미지 번호
+        //  F6 : 앵글 자동 스위칭
+        //  F7 : 이미지 자동 배치
+        // =====================================================
+        (function () {
+            var fs      = cep_node.require('fs');
+            var path    = cep_node.require('path');
+            var os      = cep_node.require('os');
+            var exec    = cep_node.require('child_process').exec;
+
+            var tmpDir   = os.tmpdir();
+            var keyFile  = path.join(tmpDir, 'pprs_hotkey.txt');
+            var pidFile  = path.join(tmpDir, 'pprs_hotkey_ps.pid');
+            var ps1File  = path.join(tmpDir, 'pprs_hotkey.ps1');
+            var _polling = null;
+            var _busy    = false;
+
+            // PowerShell 스크립트 — F1~F6 전역 감지 후 파일 기록
+            var ps1 = [
+                'Add-Type -AssemblyName System.Windows.Forms;',
+                '$keys = @{',
+                '  [System.Windows.Forms.Keys]::F1 = "F1";',
+                '  [System.Windows.Forms.Keys]::F2 = "F2";',
+                '  [System.Windows.Forms.Keys]::F3 = "F3";',
+                '  [System.Windows.Forms.Keys]::F4 = "F4";',
+                '  [System.Windows.Forms.Keys]::F5 = "F5";',
+                '  [System.Windows.Forms.Keys]::F6 = "F6"',
+                '};',
+                '$keyFile = "' + keyFile.replace(/\\/g, '/') + '";',
+                '$prev = @{};',
+                'foreach ($k in $keys.Keys) { $prev[$k] = $false; }',
+                'while ($true) {',
+                '  foreach ($k in $keys.Keys) {',
+                '    $down = [System.Windows.Forms.Control]::IsKeyLocked($k) -or',
+                '            ([System.Windows.Input.Keyboard]::IsKeyDown([System.Windows.Input.Key]::$($keys[$k])));',
+                '    $state = [System.Runtime.InteropServices.Marshal]::GetAsyncKeyState($k) -band 0x8000;',
+                '    if ($state -and -not $prev[$k]) {',
+                '      [System.IO.File]::WriteAllText($keyFile, $keys[$k]);',
+                '      $prev[$k] = $true;',
+                '    } elseif (-not $state) {',
+                '      $prev[$k] = $false;',
+                '    }',
+                '  }',
+                '  Start-Sleep -Milliseconds 50;',
+                '}'
+            ].join('\n');
+
+            // 단축키 감지 (토글 ON 상태일 때만 실행)
+            var ps1Simple = [
+                'Add-Type @"',
+                'using System;',
+                'using System.Runtime.InteropServices;',
+                'public class HotKey {',
+                '    [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vKey);',
+                '}',
+                '"@',
+                '$keyFile = "' + keyFile.replace(/\\/g, '/') + '";',
+                '$map = @{ 0x70="F1"; 0x71="F2"; 0x72="F3"; 0x73="F4"; 0x74="F5"; 0x75="F6"; 0x76="F7"; 0xC0="BACKTICK" };',
+                '$prev = @{};',
+                'foreach ($k in $map.Keys) { $prev[$k] = $false; }',
+                'while ($true) {',
+                '  foreach ($k in $map.Keys) {',
+                '    $s = [HotKey]::GetAsyncKeyState($k) -band 0x8000;',
+                '    if ($s -and -not $prev[$k]) {',
+                '      [System.IO.File]::WriteAllText($keyFile, $map[$k]);',
+                '      $prev[$k] = $true;',
+                '    } elseif (-not $s) { $prev[$k] = $false; }',
+                '  }',
+                '  Start-Sleep -Milliseconds 50;',
+                '}'
+            ].join('\n');
+
+            function startHotkeyListener() {
+                try {
+                    // 기존 파일 정리
+                    if (fs.existsSync(keyFile))  fs.unlinkSync(keyFile);
+                    if (fs.existsSync(ps1File))  fs.unlinkSync(ps1File);
+
+                    fs.writeFileSync(ps1File, ps1Simple, 'utf8');
+
+                    var proc = exec(
+                        'powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + ps1File + '"',
+                        function () {}
+                    );
+
+                    // PID 저장 (패널 종료 시 kill용)
+                    if (proc && proc.pid) {
+                        fs.writeFileSync(pidFile, String(proc.pid), 'utf8');
+                    }
+
+                    // 200ms 폴링
+                    _polling = setInterval(function () {
+                        if (_busy) return;
+                        try {
+                            if (!fs.existsSync(keyFile)) return;
+                            var key = fs.readFileSync(keyFile, 'utf8').trim();
+                            if (!key) return;
+                            fs.unlinkSync(keyFile);
+                            handleHotkey(key);
+                        } catch (e) {}
+                    }, 200);
+
+                    console.log('[PPRS] 전역 단축키 리스너 시작 (F1~F6)');
+                } catch (e) {
+                    console.warn('[PPRS] 단축키 리스너 시작 실패:', e.message);
+                }
+            }
+
+            function stopHotkeyListener() {
+                if (_polling) { clearInterval(_polling); _polling = null; }
+                try {
+                    if (fs.existsSync(pidFile)) {
+                        var pid = fs.readFileSync(pidFile, 'utf8').trim();
+                        exec('taskkill /PID ' + pid + ' /T /F', function () {});
+                        fs.unlinkSync(pidFile);
+                    }
+                    if (fs.existsSync(ps1File)) fs.unlinkSync(ps1File);
+                    if (fs.existsSync(keyFile)) fs.unlinkSync(keyFile);
+                } catch (e) {}
+            }
+
+            function handleHotkey(key) {
+                _busy = true;
+                setTimeout(function () { _busy = false; }, 300); // 디바운스
+
+                // 미인증 상태 — 인증만 완료 후 동일 키 재실행
+                if (!_authPassed) {
+                    authOnly(function () { handleHotkey(key); });
+                    _busy = false;
+                    return;
+                }
+
+                if (key === 'F1') {
+                    // [Slide N] 마커
+                    var btn = document.getElementById('razor-marker-btn');
+                    var markerName = '[Slide ' + slideNum + ']';
+                    setBtnText(btn, '처리 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.razorAndMark(' + JSON.stringify(markerName) + ')', function () {
+                        slideNum++;
+                        document.getElementById('slide-start-input').value = slideNum;
+                        updateMarkerBtn();
+                        imgNum = 1;
+                        document.getElementById('img-start-input').value = imgNum;
+                        updateImgBtn();
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F2') {
+                    // 정면
+                    var btn = document.getElementById('angle-front-btn');
+                    setBtnText(btn, '...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendAngleToLastMarker("정면")', function () {
+                        setBtnText(btn, '정면');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F3') {
+                    // 우측
+                    var btn = document.getElementById('angle-right-btn');
+                    setBtnText(btn, '...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendAngleToLastMarker("우측")', function () {
+                        setBtnText(btn, '우측');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F4') {
+                    // 좌측
+                    var btn = document.getElementById('angle-left-btn');
+                    setBtnText(btn, '...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendAngleToLastMarker("좌측")', function () {
+                        setBtnText(btn, '좌측');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F5') {
+                    // [#N] 이미지 번호
+                    var btn = document.getElementById('img-marker-btn');
+                    var imgTag = '#' + imgNum;
+                    setBtnText(btn, '처리 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendImgToLastMarker(' + JSON.stringify(imgTag) + ')', function () {
+                        imgNum++;
+                        document.getElementById('img-start-input').value = imgNum;
+                        updateImgBtn();
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F6') {
+                    // 앵글 자동 스위칭
+                    var btn = document.getElementById('switch-btn');
+                    setBtnText(btn, '처리 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.autoSwitchAngle()', function () {
+                        setBtnText(btn, '앵글 자동 스위칭');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F7') {
+                    // 이미지 자동 배치
+                    var btn = document.getElementById('image-btn');
+                    setBtnText(btn, '배치 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.autoPlaceImages()', function () {
+                        setBtnText(btn, '이미지 자동 배치');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'BACKTICK') {
+                    // 현재 헤드 위치 자르기
+                    var btn = document.getElementById('razor-btn');
+                    runWithAuth('$._PPP_.razorAtPlayhead()', btn, '자르는 중...', '현재 헤드 위치 자르기', function () {
+                        _busy = false;
+                    });
+
+                } else {
+                    _busy = false;
+                }
+            }
+
+            // 토글 버튼
+            var _hotkeyOn = false;
+            var toggleBtn = document.getElementById('hotkey-toggle');
+
+            toggleBtn.onclick = function () {
+                if (_hotkeyOn) {
+                    stopHotkeyListener();
+                    _hotkeyOn = false;
+                    toggleBtn.innerText = '단축키 OFF';
+                    toggleBtn.style.background = '#333';
+                    toggleBtn.style.color = '#666';
+                    toggleBtn.style.borderColor = '#444';
+                } else {
+                    startHotkeyListener();
+                    _hotkeyOn = true;
+                    toggleBtn.innerText = '단축키 ON';
+                    toggleBtn.style.background = '#1a3a1a';
+                    toggleBtn.style.color = '#6abf6a';
+                    toggleBtn.style.borderColor = '#2d6a2d';
+                }
+            };
+
+            // 패널 언로드 시 PowerShell 종료
+            window.addEventListener('beforeunload', function () {
+                stopHotkeyListener();
+            });
+
+        })();
+    </script>
+</body>
+
+</html>
