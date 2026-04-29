@@ -999,6 +999,303 @@ async function autoRazorTracks() {
 }
 
 // ============================================================
+//  Stack Images — 헬퍼
+// ============================================================
+
+function compareClipNames(aName, bName) {
+    function parseName(n) {
+        n = String(n);
+        const dot = n.lastIndexOf('.');
+        const base = dot >= 0 ? n.substring(0, dot) : n;
+        const us = base.lastIndexOf('_');
+        const prefix = us >= 0 ? base.substring(0, us + 1) : '';
+        const last = us >= 0 ? base.substring(us + 1) : base;
+        const hy = last.indexOf('-');
+        const mainStr = hy >= 0 ? last.substring(0, hy) : last;
+        const subStr = hy >= 0 ? last.substring(hy + 1) : null;
+        let mainNum = parseInt(mainStr, 10); if (isNaN(mainNum)) mainNum = 0;
+        let subNum = null;
+        if (subStr !== null) { const ns = parseInt(subStr, 10); if (!isNaN(ns)) subNum = ns; }
+        return { prefix, main: mainNum, hasSub: subNum !== null, sub: subNum, full: n };
+    }
+    const a = parseName(aName), b = parseName(bName);
+    if (a.prefix !== b.prefix) { return a.full < b.full ? -1 : a.full > b.full ? 1 : 0; }
+    if (a.main !== b.main) return a.main - b.main;
+    if (a.hasSub && !b.hasSub) return 1;
+    if (!a.hasSub && b.hasSub) return -1;
+    if (a.hasSub && b.hasSub && a.sub !== b.sub) return a.sub - b.sub;
+    return 0;
+}
+
+function extractNumbers(filename) {
+    let name = String(filename);
+    const dot = name.lastIndexOf('.');
+    if (dot >= 0) name = name.substring(0, dot);
+    // 마지막 _숫자_숫자 또는 _숫자 패턴 추출 (p06_01 형태 대응)
+    const lastPair = name.match(/_(\d+)_(\d+)$/);
+    if (lastPair) return lastPair[1] + '_' + lastPair[2];
+    const lastSingle = name.match(/_(\d+)$/);
+    if (lastSingle) return lastSingle[1];
+    // 폴백: 앞에서부터 숫자 두 개
+    const nums = name.match(/\d+/g);
+    if (nums && nums.length >= 2) return nums[0] + '_' + nums[1];
+    if (nums && nums.length === 1) return nums[0];
+    return name;
+}
+
+function getNumbersForSort(filename) {
+    let name = String(filename);
+    const dot = name.lastIndexOf('.');
+    if (dot >= 0) name = name.substring(0, dot);
+    const nums = name.match(/\d+/g);
+    if (nums && nums.length >= 2) return { num1: parseInt(nums[0], 10), num2: parseInt(nums[1], 10) };
+    if (nums && nums.length === 1) return { num1: parseInt(nums[0], 10), num2: 0 };
+    return { num1: 0, num2: 0 };
+}
+
+function sortByNumber(a, b) {
+    const an = getNumbersForSort(a.name), bn = getNumbersForSort(b.name);
+    if (an.num1 !== bn.num1) return an.num1 - bn.num1;
+    return an.num2 - bn.num2;
+}
+
+function isAudioFile(item) {
+    const name = String(item.name).toLowerCase();
+    return name.includes('.mp3') || name.includes('.wav') || name.includes('.aac') || name.includes('.m4a');
+}
+
+function isImageFile(item) {
+    const name = String(item.name).toLowerCase();
+    return name.includes('.png') || name.includes('.jpg') || name.includes('.jpeg') ||
+        name.includes('.psd') || name.includes('.tif') || name.includes('.gif') || name.includes('.bmp');
+}
+
+async function getSelectedProjectItems() {
+    const proj = await ppro.Project.getActiveProject();
+    if (!proj) return [];
+
+    // 공식 API: ppro.ProjectUtils.getSelection(project) → ProjectItemSelection → getItems()
+    try {
+        if (ppro.ProjectUtils && typeof ppro.ProjectUtils.getSelection === 'function') {
+            const sel = await ppro.ProjectUtils.getSelection(proj);
+            if (sel && typeof sel.getItems === 'function') {
+                const items = await sel.getItems();
+                const arr = items ? (Array.isArray(items) ? items : await toArray(items)) : [];
+                dbg('[SEL] ProjectUtils.getSelection 성공: ' + arr.length + '개');
+                return arr.filter(Boolean);
+            }
+        }
+    } catch (e) { dbg('[SEL] ProjectUtils.getSelection 실패: ' + e); }
+
+    dbg('[SEL] 선택 항목 없음');
+    return [];
+}
+
+async function getTargetedVideoTrackIndex(seq) {
+    try {
+        const count = await seq.getVideoTrackCount();
+        for (let i = 0; i < count; i++) {
+            const t = await seq.getVideoTrack(i);
+            if (!t) continue;
+            try {
+                if (typeof t.isTargeted === 'function' && await t.isTargeted()) return i;
+                else if (t.isTargeted === true) return i;
+            } catch (e) { }
+        }
+    } catch (e) { dbg('[TARGET] 비디오 트랙 탐색 실패: ' + e); }
+    return 0;
+}
+
+async function getTargetedAudioTrackIndex(seq) {
+    try {
+        const count = await seq.getAudioTrackCount();
+        for (let i = 0; i < count; i++) {
+            const t = await seq.getAudioTrack(i);
+            if (!t) continue;
+            try {
+                if (typeof t.isTargeted === 'function' && await t.isTargeted()) return i;
+                else if (t.isTargeted === true) return i;
+            } catch (e) { }
+        }
+    } catch (e) { dbg('[TARGET] 오디오 트랙 탐색 실패: ' + e); }
+    return 0;
+}
+
+// ============================================================
+//  Stack Images — 핵심 기능
+// ============================================================
+
+async function stackImagesFromTrack() {
+    dbgClear();
+    const proj = await ppro.Project.getActiveProject();
+    const seq = await getActiveSeq();
+    if (!proj || !seq) { await showAlert('활성 시퀀스가 없습니다.'); return; }
+
+    const selectedItems = await getSelectedProjectItems();
+    if (!selectedItems.length) { await showAlert('프로젝트 패널에서 이미지를 선택하세요.'); return; }
+
+    selectedItems.sort((a, b) => compareClipNames(a.name, b.name));
+
+    const trackCount = await seq.getVideoTrackCount();
+    if (trackCount === 0) { await showAlert('비디오 트랙이 없습니다.'); return; }
+
+    const trackInput = getEl('stack-track-input');
+    const startTrackIndex = Math.max(0, (parseInt(trackInput ? trackInput.value : 1) || 1) - 1);
+    const available = trackCount - startTrackIndex;
+
+    if (selectedItems.length > available) {
+        const need = selectedItems.length - available;
+        await showAlert(
+            '트랙이 부족합니다.\n\n현재 V' + startTrackIndex + '번 트랙부터 ' + available + '개 사용 가능\n필요: ' + selectedItems.length + '개\n\n타임라인 빈 곳 우클릭 → [비디오 트랙 추가] 로\n' + need + '개 추가 후 다시 실행하세요.'
+        );
+        return;
+    }
+
+    const ph = await getPlayhead(seq);
+    const editor = await ppro.SequenceEditor.getEditor(seq);
+    if (!editor) { await showAlert('SequenceEditor를 가져올 수 없습니다.'); return; }
+
+    let placed = 0;
+    for (let i = 0; i < selectedItems.length; i++) {
+        const vTrackIdx = startTrackIndex + i;
+        const startTime = ppro.TickTime.createWithTicks(String(ph.ticks));
+        try {
+            proj.lockedAccess(() => {
+                proj.executeTransaction(ca => {
+                    const act = editor.createInsertProjectItemAction(selectedItems[i], startTime, vTrackIdx, -1, false);
+                    if (act) ca.addAction(act);
+                });
+            });
+            placed++;
+        } catch (e) { dbg('[STACK] insert 실패: ' + selectedItems[i].name + ' — ' + e); }
+    }
+    await showAlert('이미지 쌓기 완료: ' + placed + '개');
+}
+
+async function arrangeAudioWithImages() {
+    dbgClear();
+    const proj = await ppro.Project.getActiveProject();
+    const seq = await getActiveSeq();
+    if (!proj || !seq) { await showAlert('활성 시퀀스가 없습니다.'); return; }
+
+    const selectedItems = await getSelectedProjectItems();
+    if (!selectedItems.length) { await showAlert('프로젝트 패널에서 음성과 이미지를 함께 선택하세요.'); return; }
+
+    const audioFiles = selectedItems.filter(isAudioFile);
+    const imageFiles = selectedItems.filter(isImageFile);
+
+    if (!audioFiles.length) { await showAlert('음성 파일이 없습니다. (mp3/wav/aac/m4a)'); return; }
+
+    audioFiles.sort(sortByNumber);
+    imageFiles.sort(sortByNumber);
+
+    const imageMap = {};
+    for (const img of imageFiles) imageMap[extractNumbers(img.name)] = img;
+
+    const editor = await ppro.SequenceEditor.getEditor(seq);
+    if (!editor) { await showAlert('SequenceEditor를 가져올 수 없습니다.'); return; }
+
+    const audioTrackIdx = await getTargetedAudioTrackIndex(seq);
+    const videoTrackIdx = await getTargetedVideoTrackIndex(seq);
+
+    // 오디오 순차 insert — 각 파일의 재생 위치를 누적 계산
+    const ph = await getPlayhead(seq);
+    let currentTicks = ph.ticks;
+    const audioClipInfo = [];
+
+    for (const af of audioFiles) {
+        const startTime = ppro.TickTime.createWithTicks(String(currentTicks));
+        try {
+            proj.lockedAccess(() => {
+                proj.executeTransaction(ca => {
+                    const act = editor.createInsertProjectItemAction(af, startTime, -1, audioTrackIdx, false);
+                    if (act) ca.addAction(act);
+                });
+            });
+        } catch (e) { dbg('[ARRANGE] 오디오 insert 실패: ' + af.name + ' — ' + e); }
+
+        // duration 가져오기
+        let durationTicks = 0;
+        try {
+            await new Promise(r => setTimeout(r, 80));
+            const aTrack = await seq.getAudioTrack(audioTrackIdx);
+            if (aTrack) {
+                const clips = aTrack.getTrackItems(ppro.Constants.TrackItemType.CLIP, false);
+                for (const cl of clips) {
+                    try {
+                        const st = await cl.getStartTime();
+                        const stTicks = Number(st && st.ticks != null ? st.ticks : 0);
+                        if (Math.abs(stTicks - currentTicks) < TICKS_PER_SECOND) {
+                            const et = await cl.getEndTime();
+                            const etTicks = Number(et && et.ticks != null ? et.ticks : 0);
+                            durationTicks = etTicks - stTicks;
+                            break;
+                        }
+                    } catch (e) { }
+                }
+            }
+        } catch (e) { dbg('[ARRANGE] duration 조회 실패: ' + e); }
+
+        audioClipInfo.push({
+            key: extractNumbers(af.name),
+            startTicks: currentTicks,
+            durationTicks
+        });
+        currentTicks += durationTicks || TICKS_PER_SECOND; // fallback: 1초
+    }
+
+    // 매칭 이미지 배치
+    let matchCount = 0, adjustCount = 0;
+    for (const info of audioClipInfo) {
+        const matchedImage = imageMap[info.key];
+        if (!matchedImage) continue;
+
+        const startTime = ppro.TickTime.createWithTicks(String(info.startTicks));
+        try {
+            proj.lockedAccess(() => {
+                proj.executeTransaction(ca => {
+                    const act = editor.createOverwriteItemAction(matchedImage, startTime, videoTrackIdx, -1);
+                    if (act) ca.addAction(act);
+                });
+            });
+            matchCount++;
+        } catch (e) { dbg('[ARRANGE] 이미지 배치 실패: ' + matchedImage.name + ' — ' + e); continue; }
+
+        // 이미지 끝 시간을 오디오 duration에 맞춤
+        if (info.durationTicks > 0) {
+            try {
+                await new Promise(r => setTimeout(r, 80));
+                const vTrack = await seq.getVideoTrack(videoTrackIdx);
+                if (vTrack) {
+                    const clips = vTrack.getTrackItems(ppro.Constants.TrackItemType.CLIP, false);
+                    let target = null, bestDiff = Infinity;
+                    for (const cl of clips) {
+                        try {
+                            const st = await cl.getStartTime();
+                            const stTicks = Number(st && st.ticks != null ? st.ticks : 0);
+                            const diff = Math.abs(stTicks - info.startTicks);
+                            if (diff < bestDiff) { bestDiff = diff; target = cl; }
+                        } catch (e) { }
+                    }
+                    if (target && bestDiff < TICKS_PER_SECOND) {
+                        const endTime = ppro.TickTime.createWithTicks(String(info.startTicks + info.durationTicks));
+                        proj.lockedAccess(() => {
+                            proj.executeTransaction(ca => {
+                                const act = target.createSetEndAction(endTime);
+                                if (act) ca.addAction(act);
+                            });
+                        });
+                        adjustCount++;
+                    }
+                }
+            } catch (e) { dbg('[ARRANGE] 끝 시간 조정 실패: ' + e); }
+        }
+    }
+
+    await showAlert('완료!\n\n음성: ' + audioFiles.length + '개\n이미지: ' + matchCount + '개\n길이 조정: ' + adjustCount + '개');
+}
+
+// ============================================================
 //  이미지 자동 배치
 // ============================================================
 
@@ -1274,6 +1571,118 @@ document.addEventListener('DOMContentLoaded', () => {
     bind('img-marker-btn', guarded(() => safeRun('이미지 마커', btnImg)));
     bind('switch-btn', guarded(() => safeRun('앵글 스위칭', autoSwitchAngle)));
     bind('image-btn', guarded(() => safeRun('이미지 배치', autoPlaceImages)));
+    bind('stack-btn', guarded(() => safeRun('이미지 쌓기', stackImagesFromTrack)));
+    bind('arrange-btn', guarded(() => safeRun('음성+이미지 나열', arrangeAudioWithImages)));
+
+    // 선택 API 진단 (임시)
+    const probeSelBtn = getEl('probe-sel-btn');
+    if (probeSelBtn) {
+        probeSelBtn.addEventListener('click', async () => {
+            const log = getEl('sel-debug-log');
+            const lines = [];
+            const w = (s) => { lines.push(s); if (log) log.value = lines.join('\n'); };
+
+            try {
+                const proj = await ppro.Project.getActiveProject();
+                if (!proj) { w('프로젝트 없음'); return; }
+
+                // proj 프로토타입 메서드 목록
+                try {
+                    const proto = Object.getPrototypeOf(proj);
+                    w('proj methods: ' + Object.getOwnPropertyNames(proto).join(', '));
+                } catch (e) { w('proto 실패: ' + e); }
+
+                // ppro.Project 정적 메서드
+                try {
+                    w('ppro.Project keys: ' + Reflect.ownKeys(ppro.Project).map(String).join(', '));
+                } catch (e) { w('Project keys 실패: ' + e); }
+
+                // getSelection 직접 시도
+                try {
+                    const sel = await proj.getSelection();
+                    w('getSelection 결과: ' + JSON.stringify(sel && sel.length));
+                } catch (e) { w('getSelection 오류: ' + e); }
+
+                // getProjectViewIDs 시도
+                try {
+                    const ids = await ppro.Project.getProjectViewIDs();
+                    w('getProjectViewIDs: ' + JSON.stringify(ids));
+                } catch (e) { w('getProjectViewIDs 오류: ' + e); }
+
+                // ProjectUtils.getSelection
+                try {
+                    if (ppro.ProjectUtils && typeof ppro.ProjectUtils.getSelection === 'function') {
+                        const sel = await ppro.ProjectUtils.getSelection(proj);
+                        w('ProjectUtils.getSelection sel: ' + typeof sel);
+                        if (sel) {
+                            const proto = Object.getPrototypeOf(sel);
+                            w('selection methods: ' + Object.getOwnPropertyNames(proto).join(', '));
+                            const items = await sel.getItems();
+                            const arr = items ? (Array.isArray(items) ? items : await toArray(items)) : [];
+                            w('선택된 항목 수: ' + arr.length);
+                            if (arr.length) w('첫 항목명: ' + arr[0].name);
+                        }
+                    } else {
+                        w('ppro.ProjectUtils: ' + typeof ppro.ProjectUtils);
+                        if (ppro.ProjectUtils) w('ProjectUtils keys: ' + Reflect.ownKeys(ppro.ProjectUtils).map(String).join(', '));
+                    }
+                } catch (e) { w('ProjectUtils 오류: ' + e); }
+
+                // SequenceEditor.createInsertProjectItemAction 시그니처 ���인
+                try {
+                    const seq = await proj.getActiveSequence();
+                    if (seq) {
+                        const editor = await ppro.SequenceEditor.getEditor(seq);
+                        if (editor) {
+                            const proto = Object.getPrototypeOf(editor);
+                            w('editor methods: ' + Object.getOwnPropertyNames(proto).join(', '));
+                            // 선택된 첫 항목으로 insert 시도 (로그만)
+                            const sel = await ppro.ProjectUtils.getSelection(proj);
+                            const items = sel ? await sel.getItems() : [];
+                            const arr = Array.isArray(items) ? items : await toArray(items);
+                            if (arr.length) {
+                                const ph = await seq.getPlayerPosition();
+                                const startTime = ppro.TickTime.createWithTicks(String(ph.ticks));
+                                try {
+                                    const act = editor.createInsertProjectItemAction(arr[0], startTime, 0, -1);
+                                    w('createInsertProjectItemAction(item, time, 0, -1): ' + typeof act);
+                                } catch (e2) { w('insert(item,time,0,-1) 오류: ' + e2); }
+                                try {
+                                    const act = editor.createInsertProjectItemAction(arr[0], startTime, 0);
+                                    w('createInsertProjectItemAction(item, time, 0): ' + typeof act);
+                                } catch (e2) { w('insert(item,time,0) 오류: ' + e2); }
+                                try {
+                                    const act = editor.createOverwriteItemAction(arr[0], startTime, 0, -1);
+                                    w('createOverwriteItemAction(item, time, 0, -1): ' + typeof act);
+                                } catch (e2) { w('overwrite(item,time,0,-1) 오류: ' + e2); }
+                            } else {
+                                w('선택 항목 없음 — 이미지 선택 후 진단 버튼 눌러주세요');
+                            }
+                        }
+                    }
+                } catch (e) { w('SequenceEditor 진단 오류: ' + e); }
+
+            } catch (e) { w('전체 오류: ' + e); }
+        });
+    }
+
+    // 탭 전환
+    const tabEdit = getEl('tab-edit');
+    const tabStack = getEl('tab-stack');
+    const panelEdit = getEl('panel-edit');
+    const panelStack = getEl('panel-stack');
+    if (tabEdit && tabStack) {
+        tabEdit.addEventListener('click', () => {
+            if (document.body.classList.contains('modal-open')) return;
+            tabEdit.classList.add('active'); tabStack.classList.remove('active');
+            panelEdit.classList.add('active'); panelStack.classList.remove('active');
+        });
+        tabStack.addEventListener('click', () => {
+            if (document.body.classList.contains('modal-open')) return;
+            tabStack.classList.add('active'); tabEdit.classList.remove('active');
+            panelStack.classList.add('active'); panelEdit.classList.remove('active');
+        });
+    }
 
     /* bind('debug-shape-btn', guarded(async () => {
         dbgClear();

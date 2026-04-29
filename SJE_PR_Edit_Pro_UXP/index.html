@@ -263,11 +263,52 @@
             background: #232323;
         }
 
+        /* ── 탭 바 ── */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid #2c2c2c;
+            background: #1a1a1a;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px 4px;
+            font-size: 11px;
+            font-family: inherit;
+            color: #7a7a7a;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            text-align: center;
+            letter-spacing: 0.2px;
+            transition: color 0.1s, border-color 0.1s;
+        }
+
+        .tab-btn.active {
+            color: #e6e6e6;
+            border-bottom-color: #9a9a9a;
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #aaaaaa;
+        }
+
+        /* ── 패널 ── */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
         /* ── 모달 열림 시 배경 요소 차단 (모달 오버레이 내부 제외) ── */
         body.modal-open .section input,
         body.modal-open .section button,
         body.modal-open .footer button,
-        body.modal-open .footer span {
+        body.modal-open .footer span,
+        body.modal-open .tab-btn {
             pointer-events: none !important;
             visibility: hidden !important;
         }
@@ -275,6 +316,15 @@
 </head>
 
 <body>
+
+    <!-- 탭 바 -->
+    <div class="tab-bar">
+        <div class="tab-btn active" id="tab-edit" role="button">Edit Pro</div>
+        <div class="tab-btn" id="tab-stack" role="button">Stack Images</div>
+    </div>
+
+    <!-- 패널 1: Edit Pro -->
+    <div class="tab-panel active" id="panel-edit">
 
     <!-- 섹션 1: 자르기 -->
     <div class="section">
@@ -353,6 +403,53 @@
             </div>
         </div>
     </div>
+
+    </div><!-- /panel-edit -->
+
+    <!-- 패널 2: Stack Images -->
+    <div class="tab-panel" id="panel-stack">
+
+        <!-- 섹션: 이미지 쌓기 -->
+        <div class="section">
+            <div class="section-header">
+                <span>이미지 쌓기</span>
+            </div>
+            <div class="btn-row">
+                <div class="field-row">
+                    <label>시작 V 트랙</label>
+                    <input type="number" id="stack-track-input" value="1" min="1" />
+                </div>
+                <div class="btn btn-default" id="stack-btn" role="button">
+                    <span class="btn-inner"><span>이미지 쌓기</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 섹션: 음성+이미지 나열 -->
+        <div class="section">
+            <div class="section-header">
+                <span>음성+이미지 나열</span>
+            </div>
+            <div class="btn-row">
+                <div class="btn btn-default" id="arrange-btn" role="button">
+                    <span class="btn-inner"><span>음성+이미지 나열</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 섹션: 진단 (임시) -->
+        <div class="section" id="section-sel-debug">
+            <div class="section-header"><span>선택 API 진단 (임시)</span></div>
+            <div class="btn-row">
+                <div class="btn btn-default" id="probe-sel-btn" role="button">
+                    <span class="btn-inner"><span>선택 API 진단</span></span>
+                </div>
+            </div>
+            <textarea id="sel-debug-log" readonly rows="8" spellcheck="false"
+                style="width:calc(100% - 24px);margin:0 12px 8px;background:#141414;border:1px solid #333;border-radius:3px;color:#aaa;font-size:10px;font-family:inherit;padding:6px 8px;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+
+    </div><!-- /panel-stack -->
 
     <!-- 섹션 5: 디버그 (disabled)
     <div class="section">
