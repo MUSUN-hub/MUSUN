@@ -5,7 +5,6 @@ import os
 import re
 import unicodedata
 import datetime
-import traceback
 import queue
 import json
 import subprocess
@@ -61,7 +60,7 @@ def delete_local_license():
     except Exception:
         pass
 
-def save_local_license(hwid, key, last_verified=None, expiry_date="", plan="",
+def save_local_license(hwid, key=None, email=None, last_verified=None, expiry_date="", plan="",
                        notified_30d=False, notified_7d=False):
     try:
         import time
@@ -70,6 +69,7 @@ def save_local_license(hwid, key, last_verified=None, expiry_date="", plan="",
             json.dump({
                 "hwid": hwid,
                 "key": key,
+                "email": email,
                 "last_verified": last_verified or time.time(),
                 "expiry_date": expiry_date,
                 "plan": plan,
@@ -260,7 +260,7 @@ class HashtagInjectorTab(BaseTab):
         c1 = _make_card(main, "파일 선택")
         c1.columnconfigure(1, weight=1)
         self.entry_sub = self.add_file_row(c1, "자막 파일", 0, self.browse_sub)
-        self.entry_ppt = self.add_file_row(c1, "PPT 파일", 1, self.browse_ppt)
+        self.entry_ppt = self.add_file_row(c1, "분석 JSON", 1, self.browse_ppt)
 
         # 키워드
         c2 = _make_card(main, "인식 키워드")
@@ -752,19 +752,18 @@ class LicenseDialog:
 
     def check_and_run(self):
         import time
-        VERIFY_INTERVAL = 7 * 24 * 3600  # 7일
+        VERIFY_INTERVAL = 7 * 24 * 3600
 
         local = load_local_license()
-        if local and local.get("hwid") == self.hwid and local.get("key"):
-            last_verified = local.get("last_verified", 0)
-            elapsed = time.time() - last_verified
 
+        # ① 라이선스 키 보유 → 구독 확인
+        if local and local.get("hwid") == self.hwid and local.get("key"):
+            elapsed = time.time() - local.get("last_verified", 0)
             if elapsed < VERIFY_INTERVAL:
                 self.expiry_date = local.get("expiry_date", "")
                 self.plan = local.get("plan", "")
                 self._check_expiry_and_proceed()
                 return
-
             resp = server_request("check_subscription", {"hwid": self.hwid, "key": local.get("key")})
             if resp is None:
                 self.expiry_date = local.get("expiry_date", "")
@@ -775,20 +774,17 @@ class LicenseDialog:
             if status == "active":
                 self.expiry_date = resp.get("expiry_date", "")
                 self.plan = resp.get("plan", "")
-                save_local_license(self.hwid, local.get("key"),
+                save_local_license(self.hwid, key=local.get("key"),
                                    expiry_date=self.expiry_date, plan=self.plan)
                 self._check_expiry_and_proceed()
                 return
             elif status == "grace_period":
                 self.expiry_date = resp.get("expiry_date", "")
                 self.plan = resp.get("plan", "")
-                grace_left = resp.get("grace_days_left", 0)
-                save_local_license(self.hwid, local.get("key"),
+                save_local_license(self.hwid, key=local.get("key"),
                                    expiry_date=self.expiry_date, plan=self.plan)
-                messagebox.showwarning(
-                    "구독 만료",
-                    f"구독이 만료되었습니다.\n유예기간: {grace_left}일 남았습니다.\n갱신해주세요."
-                )
+                messagebox.showwarning("구독 만료",
+                    f"구독이 만료되었습니다.\n유예기간: {resp.get('grace_days_left', 0)}일 남았습니다.\n갱신해주세요.")
                 self.result = True
                 return
             elif status == "expired":
@@ -802,26 +798,25 @@ class LicenseDialog:
                 self._check_expiry_and_proceed()
                 return
 
-        resp = server_request("trial_check", {"hwid": self.hwid})
+        # ② 이메일(체험판) 보유 → trial_check
+        if local and local.get("email"):
+            resp = server_request("trial_check", {"hwid": self.hwid, "email": local.get("email")})
+            if resp is None:
+                self.license_info = "체험판 (오프라인)"
+                self.result = True
+                return
+            status = resp.get("status", "")
+            if status in ("trial_active", "trial_already_active"):
+                remaining = resp.get("remaining", 0)
+                self.license_info = f"체험판  |  남은 기간: {remaining}일"
+                self._show_trial_active(remaining)
+                return
+            elif status == "trial_expired":
+                self._show_expired_dialog()
+                return
 
-        if resp is None:
-            messagebox.showerror("오프라인",
-                "인터넷 연결이 필요합니다.\n라이선스 인증 또는 체험판은 인터넷이 필요합니다.")
-            self.result = False
-            return
-
-        status = resp.get("status", "")
-        if status == "trial_not_found":
-            self._show_start_dialog()
-        elif status == "trial_active":
-            remaining = resp.get("remaining", 0)
-            self.license_info = f"체험판  |  남은 기간: {remaining}일"
-            self._show_trial_active(remaining)
-        elif status == "trial_expired":
-            self._show_expired_dialog()
-        else:
-            messagebox.showerror("오류", f"서버 응답 오류: {status}")
-            self.result = False
+        # ③ 아무것도 없음 → 웰컴
+        self._show_start_dialog()
 
     def _check_expiry_and_proceed(self):
         if not self.expiry_date:
@@ -843,33 +838,29 @@ class LicenseDialog:
 
             if days > 30:
                 self.result = True
-
             elif days > 7:
                 if is_yearly and not notified_30d:
                     messagebox.showinfo("구독 갱신 안내",
                         f"구독 만료까지 {days}일 남았습니다.\n기간 내 갱신해주세요.")
-                    save_local_license(local["hwid"], local["key"],
+                    save_local_license(local["hwid"], key=local.get("key"), email=local.get("email"),
                                        last_verified=local.get("last_verified"),
                                        expiry_date=self.expiry_date, plan=self.plan,
                                        notified_30d=True, notified_7d=notified_7d)
                 self.result = True
-
             elif days > 0:
                 if not notified_7d:
                     messagebox.showwarning("구독 만료 임박",
                         f"구독 만료까지 {days}일 남았습니다!\n빠른 시일 내 갱신해주세요.")
-                    save_local_license(local["hwid"], local["key"],
+                    save_local_license(local["hwid"], key=local.get("key"), email=local.get("email"),
                                        last_verified=local.get("last_verified"),
                                        expiry_date=self.expiry_date, plan=self.plan,
                                        notified_30d=notified_30d, notified_7d=True)
                 self.result = True
-
             elif days >= -7:
                 grace_left = 7 + days
                 messagebox.showwarning("구독 만료 — 유예기간",
                     f"구독이 만료되었습니다.\n유예기간: {grace_left}일 남았습니다.\n갱신해주세요.")
                 self.result = True
-
             else:
                 messagebox.showerror("구독 만료",
                     "구독 유예기간이 종료되었습니다.\n라이선스 키를 다시 입력해주세요.")
@@ -881,41 +872,152 @@ class LicenseDialog:
     def _show_start_dialog(self):
         win = tk.Toplevel(self.root)
         win.title("PPT Subtitle Helper")
-        win.geometry("400x260")
+        win.geometry("400x300")
         win.configure(bg=BG_DEEP)
         win.resizable(False, False)
         win.grab_set()
 
         tk.Label(win, text="PPT SUBTITLE HELPER",
-                 font=("Malgun Gothic", 14, "bold"), fg=ACCENT, bg=BG_DEEP).pack(pady=(30, 4))
+                 font=("Malgun Gothic", 14, "bold"), fg=ACCENT, bg=BG_DEEP).pack(pady=(28, 4))
         tk.Label(win, text="이 소프트웨어는 라이선스가 필요합니다.",
                  font=("Malgun Gothic", 9), fg=FG_MUTED, bg=BG_DEEP).pack()
         tk.Label(win, text="7일 무료 체험판을 시작하거나 라이선스 키를 입력하세요.",
-                 font=("Malgun Gothic", 9), fg=FG_MUTED, bg=BG_DEEP).pack(pady=(2, 20))
-
-        def start_trial():
-            resp = server_request("trial_register", {"hwid": self.hwid})
-            if resp and resp.get("status") == "trial_active":
-                win.destroy()
-                messagebox.showinfo("체험 시작", f"체험판이 시작되었습니다.\n남은 기간: {resp.get('remaining', 7)}일")
-                self.result = True
-            else:
-                messagebox.showerror("오류", "체험 등록 실패. 잠시 후 다시 시도하세요.")
-
-        def enter_key():
-            win.destroy()
-            self._show_key_input()
+                 font=("Malgun Gothic", 9), fg=FG_MUTED, bg=BG_DEEP).pack(pady=(2, 16))
 
         btn_frame = tk.Frame(win, bg=BG_DEEP)
         btn_frame.pack(fill="x", padx=40)
 
-        tk.Button(btn_frame, text="7일 무료 체험 시작", command=start_trial,
+        tk.Button(btn_frame, text="7일 무료 체험 시작",
+                  command=lambda: [win.destroy(), self._show_email_step()],
                   bg=BTN_BG, fg=BTN_FG, relief="flat",
-                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=9).pack(fill="x", pady=(0, 8))
-        tk.Button(btn_frame, text="라이선스 키 입력", command=enter_key,
+                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=9
+                  ).pack(fill="x", pady=(0, 8))
+        tk.Button(btn_frame, text="라이선스 키 입력",
+                  command=lambda: [win.destroy(), self._show_key_input()],
                   bg=BG_CARD, fg=FG_PRIMARY, relief="flat",
                   font=("Malgun Gothic", 10), cursor="hand2", pady=9,
-                  highlightbackground=BG_BORDER, highlightthickness=1).pack(fill="x")
+                  highlightbackground=BG_BORDER, highlightthickness=1
+                  ).pack(fill="x")
+
+        win.wait_window()
+
+    def _show_email_step(self):
+        win = tk.Toplevel(self.root)
+        win.title("체험판 시작 — 이메일 인증")
+        win.geometry("420x230")
+        win.configure(bg=BG_DEEP)
+        win.resizable(False, False)
+        win.grab_set()
+
+        tk.Label(win, text="이메일 주소 입력",
+                 font=("Malgun Gothic", 12, "bold"), fg=FG_PRIMARY, bg=BG_DEEP).pack(pady=(28, 6))
+        tk.Label(win, text="입력하신 이메일로 인증 코드를 발송합니다.\n이메일당 1회만 체험판 사용 가능합니다.",
+                 font=("Malgun Gothic", 9), fg=FG_MUTED, bg=BG_DEEP).pack(pady=(0, 12))
+
+        email_var = tk.StringVar()
+        entry = tk.Entry(win, textvariable=email_var, font=("Malgun Gothic", 11),
+                         bg=BG_INPUT, fg=FG_PRIMARY, insertbackground=ACCENT,
+                         relief="flat", highlightbackground=BG_BORDER, highlightthickness=1,
+                         justify="center")
+        entry.pack(fill="x", padx=40, ipady=7)
+        entry.focus()
+
+        msg_label = tk.Label(win, text="", font=("Malgun Gothic", 9), bg=BG_DEEP, fg=FG_MUTED)
+        msg_label.pack(pady=(6, 0))
+
+        def send_code():
+            email = email_var.get().strip()
+            if not email or "@" not in email:
+                msg_label.config(text="올바른 이메일 주소를 입력하세요.", fg="#e06060")
+                return
+            msg_label.config(text="코드 발송 중...", fg=FG_MUTED)
+            win.update()
+            resp = server_request("trial_request_code", {"hwid": self.hwid, "email": email})
+            if resp is None:
+                msg_label.config(text="서버 연결 실패. 인터넷을 확인하세요.", fg="#e06060")
+                return
+            status = resp.get("status", "")
+            if status == "code_sent":
+                win.destroy()
+                self._show_code_step(email)
+            elif status == "trial_already_active":
+                save_local_license(self.hwid, email=email)
+                remaining = resp.get("remaining", 7)
+                self.license_info = f"체험판  |  남은 기간: {remaining}일"
+                win.destroy()
+                messagebox.showinfo("체험판 활성", f"체험판이 활성화되었습니다.\n남은 기간: {remaining}일")
+                self.result = True
+            elif status == "trial_email_used":
+                msg_label.config(text="이미 다른 기기에서 사용된 이메일입니다.", fg="#e06060")
+            elif status == "code_already_sent":
+                win.destroy()
+                self._show_code_step(email)
+            else:
+                msg_label.config(text=f"오류: {resp.get('message', status)}", fg="#e06060")
+
+        entry.bind("<Return>", lambda e: send_code())
+        tk.Button(win, text="인증 코드 발송", command=send_code,
+                  bg=BTN_BG, fg=BTN_FG, relief="flat",
+                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=8
+                  ).pack(fill="x", padx=40, pady=(12, 0))
+
+        win.wait_window()
+
+    def _show_code_step(self, email):
+        win = tk.Toplevel(self.root)
+        win.title("인증 코드 입력")
+        win.geometry("420x240")
+        win.configure(bg=BG_DEEP)
+        win.resizable(False, False)
+        win.grab_set()
+
+        tk.Label(win, text="인증 코드 입력",
+                 font=("Malgun Gothic", 12, "bold"), fg=FG_PRIMARY, bg=BG_DEEP).pack(pady=(28, 4))
+        tk.Label(win, text=f"{email}\n으로 발송된 6자리 코드를 입력하세요.",
+                 font=("Malgun Gothic", 9), fg=FG_MUTED, bg=BG_DEEP).pack(pady=(0, 12))
+
+        code_var = tk.StringVar()
+        entry = tk.Entry(win, textvariable=code_var, font=("Malgun Gothic", 14),
+                         bg=BG_INPUT, fg=FG_PRIMARY, insertbackground=ACCENT,
+                         relief="flat", highlightbackground=BG_BORDER, highlightthickness=1,
+                         justify="center", width=12)
+        entry.pack(ipady=7)
+        entry.focus()
+
+        msg_label = tk.Label(win, text="", font=("Malgun Gothic", 9), bg=BG_DEEP, fg=FG_MUTED)
+        msg_label.pack(pady=(6, 0))
+
+        def verify():
+            code = code_var.get().strip()
+            if not code:
+                msg_label.config(text="코드를 입력하세요.", fg="#e06060")
+                return
+            msg_label.config(text="확인 중...", fg=FG_MUTED)
+            win.update()
+            resp = server_request("trial_verify_code", {"hwid": self.hwid, "email": email, "code": code})
+            if resp is None:
+                msg_label.config(text="서버 연결 실패. 인터넷을 확인하세요.", fg="#e06060")
+                return
+            status = resp.get("status", "")
+            if status in ("verified", "trial_already_active"):
+                save_local_license(self.hwid, email=email)
+                remaining = resp.get("remaining", 7)
+                self.license_info = f"체험판  |  남은 기간: {remaining}일"
+                win.destroy()
+                messagebox.showinfo("체험판 시작", f"체험판이 시작되었습니다.\n남은 기간: {remaining}일")
+                self.result = True
+            elif status == "invalid_code":
+                msg_label.config(text="올바르지 않은 코드입니다.", fg="#e06060")
+            elif status == "code_expired":
+                msg_label.config(text="코드가 만료되었습니다. 다시 시도해주세요.", fg="#e06060")
+            else:
+                msg_label.config(text=f"오류: {resp.get('message', status)}", fg="#e06060")
+
+        entry.bind("<Return>", lambda e: verify())
+        tk.Button(win, text="확인", command=verify,
+                  bg=BTN_BG, fg=BTN_FG, relief="flat",
+                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=8
+                  ).pack(fill="x", padx=40, pady=(12, 0))
 
         win.wait_window()
 
@@ -932,24 +1034,20 @@ class LicenseDialog:
         tk.Label(win, text=f"체험판 사용 중  |  남은 기간: {remaining}일",
                  font=("Malgun Gothic", 10), fg=FG_PRIMARY, bg=BG_DEEP).pack(pady=(4, 20))
 
-        def continue_trial():
-            win.destroy()
-            self.result = True
-
-        def enter_key():
-            win.destroy()
-            self._show_key_input()
-
         btn_frame = tk.Frame(win, bg=BG_DEEP)
         btn_frame.pack(fill="x", padx=40)
 
-        tk.Button(btn_frame, text="계속 체험판으로 사용", command=continue_trial,
+        tk.Button(btn_frame, text="계속 체험판으로 사용",
+                  command=lambda: [win.destroy(), setattr(self, 'result', True)],
                   bg=BTN_BG, fg=BTN_FG, relief="flat",
-                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=9).pack(fill="x", pady=(0, 8))
-        tk.Button(btn_frame, text="라이선스 키 등록", command=enter_key,
+                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=9
+                  ).pack(fill="x", pady=(0, 8))
+        tk.Button(btn_frame, text="라이선스 키 등록",
+                  command=lambda: [win.destroy(), self._show_key_input()],
                   bg=BG_CARD, fg=FG_PRIMARY, relief="flat",
                   font=("Malgun Gothic", 10), cursor="hand2", pady=9,
-                  highlightbackground=BG_BORDER, highlightthickness=1).pack(fill="x")
+                  highlightbackground=BG_BORDER, highlightthickness=1
+                  ).pack(fill="x")
 
         win.wait_window()
 
@@ -966,13 +1064,11 @@ class LicenseDialog:
         tk.Label(win, text="계속 사용하려면 라이선스 키를 등록하세요.",
                  font=("Malgun Gothic", 9), fg=FG_MUTED, bg=BG_DEEP).pack(pady=(0, 24))
 
-        def enter_key():
-            win.destroy()
-            self._show_key_input()
-
-        tk.Button(win, text="라이선스 키 입력", command=enter_key,
+        tk.Button(win, text="라이선스 키 입력",
+                  command=lambda: [win.destroy(), self._show_key_input()],
                   bg=BTN_BG, fg=BTN_FG, relief="flat",
-                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=9).pack(fill="x", padx=40)
+                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=9
+                  ).pack(fill="x", padx=40)
 
         win.wait_window()
 
@@ -1013,7 +1109,7 @@ class LicenseDialog:
             if status in ("activated", "already_active"):
                 self.expiry_date = resp.get("expiry_date", "")
                 self.plan = resp.get("plan", "")
-                save_local_license(self.hwid, key,
+                save_local_license(self.hwid, key=key,
                                    expiry_date=self.expiry_date, plan=self.plan)
                 win.destroy()
                 messagebox.showinfo("인증 완료", "라이선스가 등록되었습니다.")
@@ -1025,9 +1121,11 @@ class LicenseDialog:
             else:
                 msg_label.config(text=f"오류: {status}", fg="#e06060")
 
+        entry.bind("<Return>", lambda e: activate())
         tk.Button(win, text="확인", command=activate,
                   bg=BTN_BG, fg=BTN_FG, relief="flat",
-                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=8).pack(fill="x", padx=40, pady=(12, 0))
+                  font=("Malgun Gothic", 10, "bold"), cursor="hand2", pady=8
+                  ).pack(fill="x", padx=40, pady=(12, 0))
 
         win.wait_window()
 
@@ -1085,7 +1183,7 @@ class App:
         self.nb.add(HashtagInjectorTab(self.nb),   text="  해시태그 삽입  ")
 
 if __name__ == "__main__":
-    mutex_name = "Global\SJE_PPT_Subtitle_Helper_Mutex"
+    mutex_name = r"Global\SJE_PPT_Subtitle_Helper_Mutex"
     kernel32 = ctypes.windll.kernel32
     mutex = kernel32.CreateMutexW(None, False, mutex_name)
     if kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS

@@ -12,8 +12,8 @@ let _authState = null;
 let _slideNum = 1;
 let _imgNum = 1;
 
-function dbg(_msg) { /* disabled */ }
-function dbgClear() { /* disabled */ }
+function dbg(_msg) { console.log(_msg); }
+function dbgClear() { console.clear(); }
 
 function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 function ticksToSeconds(t) { return Number(t || 0) / TICKS_PER_SECOND; }
@@ -1146,7 +1146,7 @@ async function stackImagesFromTrack() {
     if (selectedItems.length > available) {
         const need = selectedItems.length - available;
         await showAlert(
-            '트랙이 부족합니다.\n\n현재 V' + startTrackIndex + '번 트랙부터 ' + available + '개 사용 가능\n필요: ' + selectedItems.length + '개\n\n타임라인 빈 곳 우클릭 → [비디오 트랙 추가] 로\n' + need + '개 추가 후 다시 실행하세요.'
+            '트랙이 부족합니다.\n\n현재 V' + (startTrackIndex + 1) + '번 트랙부터 ' + available + '개 사용 가능\n필요: ' + selectedItems.length + '개\n\n타임라인 빈 곳 우클릭 → [비디오 트랙 추가] 로\n' + need + '개 추가 후 다시 실행하세요.'
         );
         return;
     }
@@ -1539,6 +1539,30 @@ async function btnImg() {
 document.addEventListener('DOMContentLoaded', () => {
     ensureAlertUI();
 
+    /* [단축키 보류] 어도비 UXP 시스템 정상화 후 주석 해제하여 사용
+    // 단축키 로직
+    let shortcutsEnabled = false;
+    const toggleBtn = getEl('shortcut-toggle-btn');
+    const toggleText = getEl('shortcut-toggle-text');
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            shortcutsEnabled = !shortcutsEnabled;
+            if (shortcutsEnabled) {
+                toggleText.textContent = 'ON';
+                toggleText.style.color = '#ffffff';
+                toggleBtn.style.borderColor = '#0078d7';
+                toggleBtn.style.backgroundColor = '#0078d7';
+            } else {
+                toggleText.textContent = 'OFF';
+                toggleText.style.color = '#aaaaaa';
+                toggleBtn.style.borderColor = '#5a5a5a';
+                toggleBtn.style.backgroundColor = 'transparent';
+            }
+        });
+    }
+    */
+
     const bind = (id, fn) => {
         const el = getEl(id);
         if (el) el.addEventListener('click', fn);
@@ -1573,6 +1597,23 @@ document.addEventListener('DOMContentLoaded', () => {
     bind('image-btn', guarded(() => safeRun('이미지 배치', autoPlaceImages)));
     bind('stack-btn', guarded(() => safeRun('이미지 쌓기', stackImagesFromTrack)));
     bind('arrange-btn', guarded(() => safeRun('음성+이미지 나열', arrangeAudioWithImages)));
+
+    /* [단축키 보류] 어도비 UXP 시스템 정상화 후 주석 해제하여 사용
+    // 단축키 감지 리스너 (DOMContentLoaded 내부)
+    document.addEventListener('keydown', (e) => {
+        if (!shortcutsEnabled) return;
+        // 입력창(input)에서 숫자나 텍스트를 입력 중일 때는 무시
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        switch (e.key) {
+            case 'F1': e.preventDefault(); getEl('razor-btn')?.click(); break;
+            case 'F2': e.preventDefault(); getEl('razor-marker-btn')?.click(); break;
+            case 'F3': e.preventDefault(); getEl('angle-front-btn')?.click(); break;
+            case 'F4': e.preventDefault(); getEl('angle-right-btn')?.click(); break;
+            case 'F5': e.preventDefault(); getEl('angle-left-btn')?.click(); break;
+        }
+    });
+    */
 
     // 선택 API 진단 (임시)
     const probeSelBtn = getEl('probe-sel-btn');
