@@ -1,0 +1,20 @@
+Windows Registry Editor Version 5.00
+
+; SJE CEP Bridge — Adobe CEP 개발자 모드 활성화
+; 이 파일을 더블클릭하면 자동으로 레지스트리가 설정됩니다.
+; Premiere Pro 버전별로 필요한 CSXS 키를 모두 추가합니다.
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.9]
+"PlayerDebugMode"="1"
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.10]
+"PlayerDebugMode"="1"
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.11]
+"PlayerDebugMode"="1"
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.12]
+"PlayerDebugMode"="1"
+
+[HKEY_CURRENT_USER\Software\Adobe\CSXS.13]
+"PlayerDebugMode"="1"

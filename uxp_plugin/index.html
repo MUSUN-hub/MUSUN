@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { font-family: sans-serif; padding: 12px; color: #ddd; }
+      #status { padding: 8px; border-radius: 4px; margin-bottom: 8px; }
+      .connected { background: #1f6f3a; }
+      .disconnected { background: #6f1f1f; }
+      textarea#log { width: 100%; box-sizing: border-box; font-size: 11px; height: 260px; background: #222; color: #ddd; padding: 6px; border-radius: 4px; border: 1px solid #444; font-family: monospace; resize: vertical; }
+      button { padding: 6px 10px; margin-right: 6px; margin-bottom: 6px; }
+    </style>
+  </head>
+  <body>
+    <div id="status" class="disconnected">Disconnected</div>
+    <div>
+      <button id="connectBtn">Connect</button>
+      <button id="stopBtn">Stop</button>
+    </div>
+    <textarea id="log" readonly></textarea>
+    <script src="main.js"></script>
+  </body>
+</html>

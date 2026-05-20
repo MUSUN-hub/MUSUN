@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SJE CEP Bridge</title>
+  <style>
+    body { font-family: monospace; font-size: 12px; background: #1e1e1e; color: #ccc; margin: 0; padding: 8px; }
+    #status { padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; font-weight: bold; }
+    .connected    { background: #1f6f3a; color: #7fc47a; }
+    .disconnected { background: #6f1f1f; color: #c47a7a; }
+    .waiting      { background: #3a3a1e; color: #c4c47a; }
+    #controls { margin-bottom: 8px; }
+    button { padding: 6px 10px; margin-right: 6px; cursor: pointer; }
+    #log { height: 200px; overflow-y: auto; border: 1px solid #333; padding: 4px; font-size: 11px; }
+    .ok  { color: #7fc47a; }
+    .err { color: #c47a7a; }
+    .cmd { color: #7aa8c4; }
+  </style>
+</head>
+<body>
+  <div id="status" class="disconnected">Disconnected</div>
+  <div id="controls">
+    <button id="connectBtn">Connect</button>
+    <button id="stopBtn">Stop</button>
+  </div>
+  <div id="log"></div>
+  <script src="CSInterface.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
