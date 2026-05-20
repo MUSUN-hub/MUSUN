@@ -30,7 +30,7 @@ function doGet(e) {
           return HtmlService.createHtmlOutput('<p style="color:red;font-family:sans-serif;padding:20px">Unauthorized</p>');
         }
         return HtmlService.createHtmlOutput(getAdminDashboardHtml())
-          .setTitle('SJE Admin')
+          .setTitle('SJE PR Admin')
           .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
       }
       return respond({ status: "error", message: "action required" });
@@ -38,18 +38,21 @@ function doGet(e) {
 
     if (action === "activate")              return respond(activateLicense(hwid, key));
     if (action === "check_subscription")   return respond(checkSubscription(hwid, key));
+    if (action === "deactivate")           return respond(deactivateLicense(hwid, key));
     if (action === "trial_check")          return respond(checkTrial(p.email, hwid));
     if (action === "trial_request_code")   return respond(requestTrialCode(p.email, hwid));
     if (action === "trial_verify_code")    return respond(verifyTrialCode(p.email, hwid, p.code));
+    if (action === "inquiry")              return respond(sendInquiry(p.name, p.email, p.plan, p.message));
 
     // 관리자 전용 액션 — admin_pw 검증
-    if (action === "register" || action === "renew" || action === "change_plan") {
+    if (action === "register" || action === "renew" || action === "change_plan" || action === "list") {
       if (!p.admin_pw || p.admin_pw !== ADMIN_PW) {
         return respond({ status: "error", message: "unauthorized" });
       }
       if (action === "register")    return respond(registerLicenseKey(p.key, p.user, p.max, p.plan, p.expiry_date));
       if (action === "renew")       return respond(renewSubscription(p.key, p.plan));
       if (action === "change_plan") return respond(changePlan(p.key, p.plan));
+      if (action === "list")        return respond(listLicenses());
     }
 
     return respond({ status: "error", message: "unknown action" });
@@ -182,6 +185,68 @@ function changePlan(key, plan) {
     sheet.getRange(i + 1, 9).setValue(newExpiryISO);  // I열: ExpiryDate
 
     return { status: "plan_changed", plan: plan, new_expiry_date: newExpiryISO };
+  }
+
+  return { status: "invalid_key" };
+}
+
+// ============================================================
+//  라이선스 목록 조회 (관리자용)
+// ============================================================
+function listLicenses() {
+  var sheet = getLicenseSheet();
+  var data  = sheet.getDataRange().getValues();
+  var now   = new Date();
+  var list  = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var row       = data[i];
+    var key       = (row[0] || "").toString().trim();
+    if (!key) continue;
+    var user      = (row[2] || "").toString();
+    var plan      = (row[7] || "").toString();
+    var expiryStr = (row[8] || "").toString();
+    var daysRemaining = null;
+    var subStatus = "permanent";
+    if (expiryStr) {
+      var expiry = new Date(expiryStr);
+      var diff   = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+      daysRemaining = diff;
+      if      (diff > 0)           subStatus = "valid";
+      else if (diff > -GRACE_DAYS) subStatus = "grace";
+      else                         subStatus = "expired";
+    }
+    list.push({ key: key, user: user, plan: plan, expiry_date: expiryStr, days_remaining: daysRemaining, sub_status: subStatus });
+  }
+
+  return { status: "ok", licenses: list };
+}
+
+// ============================================================
+//  라이선스 해제 (PC 이전용)
+// ============================================================
+function deactivateLicense(hwid, key) {
+  if (!hwid || !key) return { status: "error", message: "hwid/key required" };
+
+  var sheet = getLicenseSheet();
+  var data  = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var row      = data[i];
+    var rowKey   = (row[0] || "").toString().trim();
+    var rowHwids = (row[1] || "").toString().trim();
+    if (rowKey !== key) continue;
+
+    var hwidList = rowHwids ? rowHwids.split(",").map(function(h) { return h.trim(); }) : [];
+    var idx      = hwidList.indexOf(hwid.trim());
+    if (idx === -1) return { status: "error", message: "hwid not found" };
+
+    hwidList.splice(idx, 1);
+    sheet.getRange(i + 1, 2).setValue(hwidList.join(","));
+    sheet.getRange(i + 1, 5).setValue(hwidList.length);
+    if (hwidList.length === 0) sheet.getRange(i + 1, 4).setValue("");
+
+    return { status: "deactivated" };
   }
 
   return { status: "invalid_key" };
@@ -576,7 +641,7 @@ function getAdminDashboardHtml() {
     + 'if(res.status==="registered"){'
     + 'document.getElementById("genKey").textContent=key;'
     + 'setGenStatus("✅ 등록 성공 ("+ps+" / 만료: "+ex+")","ok");'
-    + 'showResult("regResult","✅ 등록 성공","ok");}'
+    + 'showResult("regResult","✅ 등록 성공","ok");loadList();}'
     + 'else if(res.status==="duplicate"){'
     + 'document.getElementById("genKey").textContent=key;'
     + 'setGenStatus("⚠️ 중복 키 (이미 등록됨)","warn");'
@@ -593,7 +658,7 @@ function getAdminDashboardHtml() {
     + 'var res=await apiCall({action:"renew",key:key,plan:plan});'
     + 'if(res.status==="renewed"){'
     + 'var ps=res.plan==="yearly"?"연간":"월간",ex=(res.expiry_date||"").slice(0,10);'
-    + 'showResult("renewResult","✅ 갱신 완료 ("+ps+" / 새 만료일: "+ex+")","ok");}'
+    + 'showResult("renewResult","✅ 갱신 완료 ("+ps+" / 새 만료일: "+ex+")","ok");loadList();}'
     + 'else if(res.status==="invalid_key")showResult("renewResult","❌ 유효하지 않은 키","err");'
     + 'else showResult("renewResult","❌ 실패: "+(res.message||res.status),"err");'
     + '}catch(e){showResult("renewResult","❌ 네트워크 오류: "+e.message,"err");}}'
@@ -614,46 +679,73 @@ function getAdminDashboardHtml() {
     + 'btn.textContent="✅ 복사됨";'
     + 'setTimeout(function(){btn.textContent="클립보드에 복사";},2000);});}'
 
+    + 'async function loadList(){'
+    + 'document.getElementById("licList").innerHTML=\'<div style="color:#666680;font-size:0.83rem">로딩 중...</div>\';'
+    + 'try{'
+    + 'var res=await apiCall({action:"list"});'
+    + 'if(!res.licenses||res.licenses.length===0){document.getElementById("licList").innerHTML=\'<div style="color:#666680;font-size:0.83rem">등록된 라이선스 없음</div>\';return;}'
+    + 'var h="";res.licenses.forEach(function(lic){'
+    + 'var ps=lic.plan==="yearly"?"연간":"월간";'
+    + 'var ex=lic.expiry_date?lic.expiry_date.slice(0,10):"만료일없음";'
+    + 'var dr=lic.days_remaining!=null?lic.days_remaining+"일":"";'
+    + 'var c=lic.sub_status==="expired"?"#f44336":lic.sub_status==="grace"?"#c8a84b":"#4caf50";'
+    + 'h+=\'<div class="list-item" data-key="\'+lic.key+\'"><div class="list-key">\'+lic.key+\'</div><div class="list-user">\'+lic.user+\'</div><div class="list-meta" style="color:\'+c+\'">\'+ps+" · 만료 "+ex+(dr?" · "+dr:"")+\'</div></div>\';});'
+    + 'document.getElementById("licList").innerHTML=h;'
+    + 'document.querySelectorAll("#licList .list-item").forEach(function(el){'
+    + 'el.addEventListener("click",function(){'
+    + 'var k=this.getAttribute("data-key");'
+    + 'document.getElementById("renewKey").value=k;'
+    + 'document.getElementById("renewKey").scrollIntoView({behavior:"smooth",block:"center"});'
+    + 'document.getElementById("renewKey").focus();});});'
+    + '}catch(e){document.getElementById("licList").innerHTML=\'<div style="color:#f44336;font-size:0.83rem">목록 로드 실패</div>\';}}'
+
     + 'document.addEventListener("DOMContentLoaded",function(){'
     + 'document.getElementById("startDate").value=new Date().toISOString().slice(0,10);'
     + 'updatePreview();'
-    + 'document.getElementById("startDate").addEventListener("change",updatePreview);});'
+    + 'document.getElementById("startDate").addEventListener("change",updatePreview);'
+    + 'document.getElementById("listRefresh").addEventListener("click",loadList);'
+    + 'loadList();});'
     + '<\/script>';
 
   var css = '<style>'
     + '*{box-sizing:border-box;margin:0;padding:0}'
-    + 'body{background:#0f0f17;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;overflow-x:clip;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,16px)}'
+    + 'body{background:#0d1117;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;overflow-x:clip;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,16px)}'
     + '.wrap{max-width:480px;margin:0 auto}'
-    + '.hdr{background:#12121e;padding:20px;text-align:center;border-bottom:2px solid #c8a84b;position:sticky;top:0;z-index:10}'
-    + '.hdr h1{color:#c8a84b;font-size:1.3rem;letter-spacing:3px}'
-    + '.hdr p{color:#666680;font-size:0.72rem;margin-top:4px}'
-    + '.card{background:#1a1a28;border:1px solid #2a2a3a;border-radius:8px;margin:14px;padding:16px}'
-    + '.card-title{color:#c8a84b;font-size:0.82rem;font-weight:bold;letter-spacing:1px;margin-bottom:14px;padding-left:8px;border-left:3px solid #c8a84b}'
-    + 'label.lbl{display:block;color:#888899;font-size:0.73rem;margin-bottom:4px;margin-top:10px}'
-    + 'input[type=text],input[type=date]{width:100%;background:#12121e;color:#e0e0e0;border:1px solid #2a2a3a;border-radius:4px;padding:10px 12px;font-size:16px;min-height:44px;touch-action:manipulation}'
+    + '.hdr{background:#0d1117;padding:20px;text-align:center;border-bottom:2px solid #4d9fff;position:sticky;top:0;z-index:10}'
+    + '.hdr h1{color:#4d9fff;font-size:1.3rem;letter-spacing:3px}'
+    + '.hdr p{color:#5a6a80;font-size:0.72rem;margin-top:4px}'
+    + '.card{background:#161d27;border:1px solid #1e2d3d;border-radius:8px;margin:14px;padding:16px}'
+    + '.card-title{color:#4d9fff;font-size:0.82rem;font-weight:bold;letter-spacing:1px;margin-bottom:14px;padding-left:8px;border-left:3px solid #4d9fff}'
+    + 'label.lbl{display:block;color:#7a8fa8;font-size:0.73rem;margin-bottom:4px;margin-top:10px}'
+    + 'input[type=text],input[type=date]{width:100%;background:#0d1117;color:#e0e0e0;border:1px solid #1e2d3d;border-radius:4px;padding:10px 12px;font-size:16px;min-height:44px;touch-action:manipulation}'
     + 'input[type=date]{color-scheme:dark}'
-    + 'input:focus{outline:none;border-color:#c8a84b}'
-    + '.sel{width:100%;background:#12121e;color:#e0e0e0;border:1px solid #2a2a3a;border-radius:4px;padding:10px 36px 10px 12px;font-size:16px;margin-top:4px;min-height:44px;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'8\'%3E%3Cpath d=\'M0 0l6 8 6-8z\' fill=\'%23888899\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;touch-action:manipulation}'
-    + '.sel:focus{outline:none;border-color:#c8a84b}'
-    + '.preview{color:#c8a84b;font-size:0.83rem;margin-top:8px;min-height:18px}'
-    + '.btn{width:100%;background:#c8a84b;color:#0f0f17;border:none;border-radius:4px;padding:13px;font-size:0.93rem;font-weight:bold;cursor:pointer;margin-top:14px;min-height:48px}'
-    + '.btn:active{background:#a07830}'
-    + '.result{margin-top:10px;padding:10px 12px;border-radius:4px;font-size:0.83rem;background:#12121e;border:1px solid #2a2a3a;display:none}'
+    + 'input:focus{outline:none;border-color:#4d9fff}'
+    + '.sel{width:100%;background:#0d1117;color:#e0e0e0;border:1px solid #1e2d3d;border-radius:4px;padding:10px 36px 10px 12px;font-size:16px;margin-top:4px;min-height:44px;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'8\'%3E%3Cpath d=\'M0 0l6 8 6-8z\' fill=\'%237a8fa8\'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;touch-action:manipulation}'
+    + '.sel:focus{outline:none;border-color:#4d9fff}'
+    + '.preview{color:#4d9fff;font-size:0.83rem;margin-top:8px;min-height:18px}'
+    + '.btn{width:100%;background:#4d9fff;color:#0d1117;border:none;border-radius:4px;padding:13px;font-size:0.93rem;font-weight:bold;cursor:pointer;margin-top:14px;min-height:48px}'
+    + '.btn:active{background:#2a7fd4}'
+    + '.result{margin-top:10px;padding:10px 12px;border-radius:4px;font-size:0.83rem;background:#0d1117;border:1px solid #1e2d3d;display:none}'
     + '.result.ok{color:#4caf50;border-color:#4caf50}'
     + '.result.err{color:#f44336;border-color:#f44336}'
-    + '.result.warn{color:#c8a84b;border-color:#c8a84b}'
+    + '.result.warn{color:#4d9fff;border-color:#4d9fff}'
     + '.key-row{display:flex;align-items:center;gap:8px;margin-top:4px}'
-    + '.key-display{flex:1;min-width:0;background:#12121e;border:1px solid #2a2a3a;border-radius:4px;padding:10px 12px;font-family:monospace;font-size:0.95rem;color:#c8a84b;word-break:break-all;min-height:42px}'
-    + '.copy-btn-inline{background:#2a2a3a;color:#e0e0e0;border:none;border-radius:4px;padding:10px 14px;font-size:0.8rem;cursor:pointer;white-space:nowrap;flex-shrink:0}'
-    + '.copy-btn-inline:active{background:#3a3a4a}'
-    + '.gen-status{margin-top:4px;font-size:0.83rem;color:#666680;min-height:20px}'
+    + '.key-display{flex:1;min-width:0;background:#0d1117;border:1px solid #1e2d3d;border-radius:4px;padding:10px 12px;font-family:monospace;font-size:0.95rem;color:#4d9fff;word-break:break-all;min-height:42px}'
+    + '.copy-btn-inline{background:#1e2d3d;color:#e0e0e0;border:none;border-radius:4px;padding:10px 14px;font-size:0.8rem;cursor:pointer;white-space:nowrap;flex-shrink:0}'
+    + '.copy-btn-inline:active{background:#2a3d52}'
+    + '.gen-status{margin-top:4px;font-size:0.83rem;color:#5a6a80;min-height:20px}'
     + '.gen-status.ok{color:#4caf50}'
     + '.gen-status.err{color:#f44336}'
-    + '.gen-status.warn{color:#c8a84b}'
+    + '.gen-status.warn{color:#4d9fff}'
+    + '.list-item{padding:8px 0;border-bottom:1px solid #1e2d3d;cursor:pointer}'
+    + '.list-item:hover{background:#1a2535;border-radius:4px;padding-left:6px}'
+    + '.list-key{font-family:monospace;color:#4d9fff;font-size:0.85rem}'
+    + '.list-user{font-size:0.9rem;margin:2px 0}'
+    + '.list-meta{font-size:0.75rem;color:#7a8fa8}'
     + '<\/style>';
 
   var body = ''
-    + '<div class="hdr"><h1>SJE ADMIN</h1><p>License Management Dashboard</p></div>'
+    + '<div class="hdr"><h1>PR_SJE_Edit_Pro</h1><p>Premiere Pro License Management Dashboard</p></div>'
     + '<div class="wrap">'
 
     + '<div class="card">'
@@ -691,12 +783,18 @@ function getAdminDashboardHtml() {
     + '<button class="btn" onclick="doRenew()">갱신 승인 (플랜 적용)</button>'
     + '<div class="result" id="renewResult"></div>'
     + '</div>'
+
+    + '<div class="card">'
+    + '<div class="card-title">라이선스 목록 <span id="listRefresh" style="cursor:pointer;font-size:0.75rem;color:#666680;font-weight:normal;margin-left:8px">↻ 새로고침</span></div>'
+    + '<div id="licList"><div style="color:#666680;font-size:0.83rem">로딩 중...</div></div>'
+    + '</div>'
+
     + '</div>';
 
   return '<!DOCTYPE html><html lang="ko"><head>'
     + '<meta charset="UTF-8">'
     + '<meta name="viewport" content="width=device-width,initial-scale=1.0">'
-    + '<title>SJE Admin</title>'
+    + '<title>SJE PR Admin</title>'
     + css
     + '</head><body>'
     + body
@@ -708,4 +806,31 @@ function getAdminDashboardHtml() {
 
 function testMail() {
   MailApp.sendEmail('kimsj.glory@gmail.com', '[SJE] MailApp 권한 테스트', '권한 승인 테스트 메일입니다.');
+}
+
+// ============================================================
+//  구매 문의 이메일 발송
+// ============================================================
+function sendInquiry(name, email, plan, message) {
+  if (!name || !email) return { status: "error", message: "name and email required" };
+
+  var planLabel = plan === "yearly" ? "연간 플랜" : plan === "monthly" ? "월간 플랜" : "미선택";
+  var body =
+    "=== SJE PR Edit Pro 구매 문의 ===\n\n" +
+    "이름: " + name + "\n" +
+    "이메일: " + email + "\n" +
+    "플랜: " + planLabel + "\n" +
+    "문의 내용:\n" + (message || "(없음)") + "\n\n" +
+    "전송 시각: " + new Date().toLocaleString("ko-KR");
+
+  try {
+    MailApp.sendEmail({
+      to: "kimsj.glory@gmail.com",
+      subject: "[구매문의] " + name + " — " + planLabel,
+      body: body
+    });
+    return { status: "sent" };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
 }

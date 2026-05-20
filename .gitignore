@@ -1,0 +1,14 @@
+삭제대기/
+.claude/
+__pycache__/
+*.pyc
+*.pyo
+
+# 영상 파일
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wmv
+*.flv
+*.m4v

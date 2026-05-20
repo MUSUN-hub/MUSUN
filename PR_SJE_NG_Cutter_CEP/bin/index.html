@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>SJE NG Cutter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #222222;
+            color: #c8c8c8;
+            font-family: 'Adobe Clean', 'Segoe UI', sans-serif;
+            font-size: 12px;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* 섹션 */
+        .section {
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border-bottom: 1px solid #2a2a2a;
+            gap: 8px;
+        }
+
+        .section-header .accent {
+            width: 2px;
+            height: 12px;
+            border-radius: 1px;
+            flex-shrink: 0;
+        }
+
+        .section-header span {
+            font-size: 10px;
+            font-weight: 700;
+            color: #999;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+
+        /* 버튼 공통 */
+        .btn {
+            display: block;
+            width: calc(100% - 24px);
+            margin: 0 12px;
+            padding: 7px 12px;
+            border: none;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: filter 0.15s;
+            letter-spacing: 0.2px;
+        }
+
+        .btn:hover  { filter: brightness(1.15); }
+        .btn:active { filter: brightness(0.9); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+        .btn-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            pointer-events: none;
+        }
+        .btn-inner span { flex: 1; text-align: center; }
+        .btn-key {
+            font-size: 9px;
+            font-weight: 700;
+            color: #555;
+            letter-spacing: 0.3px;
+            min-width: 22px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .btn-razor  { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-marker { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-switch { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-angle  { background: #232323; color: #cccccc; border: 1px solid #333; }
+        .btn-img    { background: #232323; color: #b89a50; border: 1px solid #4a3e20; }
+
+        .section-divider {
+            border: none;
+            border-top: 1px solid #2a2a2a;
+            margin: 4px 12px;
+        }
+
+        /* 버튼 행 */
+        .btn-row {
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        /* 섹션별 배경색 조정 */
+        #section-razor    { background: transparent; }
+        #section-marker   { background: transparent; }
+        #section-switch   { background: transparent; }
+        #section-image    { background: transparent; }
+
+        /* 앵글 3버튼 행 */
+        .angle-row {
+            display: flex;
+            gap: 6px;
+            padding: 0 12px;
+        }
+
+        .angle-row .btn {
+            width: auto;
+            flex: 1;
+            margin: 0;
+        }
+
+        /* 시작 번호 입력 */
+        .slide-num-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 12px;
+        }
+
+        .slide-num-row label {
+            font-size: 10px;
+            color: #777;
+            white-space: nowrap;
+        }
+
+        .slide-num-row input[type="number"] {
+            width: 52px;
+            background: #252525;
+            border: 1px solid #3a3a3a;
+            border-radius: 2px;
+            color: #e8e8e8;
+            font-size: 11px;
+            padding: 4px 7px;
+            outline: none;
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        .slide-num-row input[type="number"]::-webkit-inner-spin-button,
+        .slide-num-row input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+        }
+
+        .slide-num-row input[type="number"]:focus {
+            border-color: #555;
+        }
+
+        /* 탭 */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid #2a2a2a;
+            background: #1a1a1a;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 7px 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #666;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .tab-btn:hover { color: #aaa; }
+        .tab-btn.active { color: #ccc; border-bottom-color: #888; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* 푸터 */
+        .footer {
+            padding: 6px 12px 8px;
+            border-top: 1px solid #2a2a2a;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .footer span {
+            font-size: 10px;
+            color: #555;
+        }
+        #license-status {
+            font-size: 10px;
+            color: #8e8e8e;
+            flex: 1;
+        }
+        .license-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #license-key-btn, #license-inquiry-btn {
+            background: transparent;
+            color: #c8c8c8;
+            border: 1px solid #4b4b4b;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 400;
+            padding: 5px 0;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        #license-key-btn:hover, #license-inquiry-btn:hover {
+            background: #2c2c2c;
+            border-color: #5a5a5a;
+            color: #e6e6e6;
+        }
+        #license-deactivate-btn {
+            background: transparent;
+            color: #e05555;
+            border: 1px solid #5a2a2a;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 400;
+            padding: 5px 0;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        #license-deactivate-btn:hover {
+            background: #2c1a1a;
+            border-color: #e05555;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- 탭 바 -->
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tab1">편집</button>
+        <button class="tab-btn" data-tab="tab2">NG</button>
+        <button class="tab-btn" data-tab="tab3">라이선스</button>
+    </div>
+
+    <!-- 탭1: 편집 -->
+    <div class="tab-panel active" id="tab1">
+
+        <div class="section" id="section-razor">
+            <div class="section-header">
+                <div class="accent" style="background:#555;"></div>
+                <span>자르기</span>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-img" id="auto-razor-btn"><span class="btn-inner"><span>자막 위치로 자동 자르기</span></span></button>
+                <button class="btn btn-razor" id="razor-btn"><span class="btn-inner"><span>현재 헤드 위치 자르기</span><span class="btn-key">~</span></span></button>
+            </div>
+        </div>
+
+        <div class="section" id="section-marker">
+            <div class="section-header">
+                <div class="accent" style="background:#555;"></div>
+                <span>슬라이드 마커</span>
+            </div>
+            <div class="btn-row">
+                <div class="slide-num-row">
+                    <label>시작 번호</label>
+                    <input type="number" id="slide-start-input" value="1" min="1" />
+                </div>
+                <button class="btn btn-marker" id="razor-marker-btn"><span class="btn-inner"><span>[Slide 1]</span><span class="btn-key">F1</span></span></button>
+                <div class="angle-row">
+                    <button class="btn btn-angle" id="angle-front-btn"><span class="btn-inner"><span>정면</span><span class="btn-key">F2</span></span></button>
+                    <button class="btn btn-angle" id="angle-right-btn"><span class="btn-inner"><span>우측</span><span class="btn-key">F3</span></span></button>
+                    <button class="btn btn-angle" id="angle-left-btn"><span class="btn-inner"><span>좌측</span><span class="btn-key">F4</span></span></button>
+                </div>
+                <hr class="section-divider">
+                <div class="slide-num-row">
+                    <label>이미지 번호</label>
+                    <input type="number" id="img-start-input" value="1" min="1" />
+                </div>
+                <button class="btn btn-img" id="img-marker-btn"><span class="btn-inner"><span>[#1]</span><span class="btn-key">F5</span></span></button>
+            </div>
+        </div>
+
+        <div class="section" id="section-ppt-marker">
+            <div class="section-header">
+                <div class="accent" style="background:#7a6a3a;"></div>
+                <span>PPT 마커 일괄 삽입</span>
+            </div>
+            <div class="btn-row">
+                <input type="text" id="ppt-marker-json-path" placeholder="경로 붙여넣기 또는 파일 드래그"
+                    style="display:block;width:calc(100% - 24px);margin:6px 12px 4px;background:#1a1a1a;border:1px solid #333;color:#ccc;padding:4px 6px;border-radius:2px;font-size:11px;"/>
+                <button class="btn" id="ppt-marker-insert-btn" style="background:#3a3010;color:#c9a85c;border:1px solid #6a5820;margin-bottom:8px;">📌 마커 일괄 삽입</button>
+            </div>
+        </div>
+
+        <div class="section" id="section-switch">
+            <div class="section-header">
+                <div class="accent" style="background:#555;"></div>
+                <span>앵글 스위칭</span>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-switch" id="switch-btn"><span class="btn-inner"><span>앵글 자동 스위칭</span><span class="btn-key">F6</span></span></button>
+            </div>
+        </div>
+
+        <div class="section" id="section-image">
+            <div class="section-header">
+                <div class="accent" style="background:#555;"></div>
+                <span>이미지 자동 배치</span>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-img" id="image-btn"><span class="btn-inner"><span>이미지 자동 배치</span><span class="btn-key">F7</span></span></button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="license-row">
+                <span>V1.0 · SJE NG Cutter</span>
+                <button id="hotkey-toggle" style="
+                    background:#333; color:#666; border:1px solid #444;
+                    border-radius:2px; font-size:10px; font-weight:600;
+                    padding:2px 7px; cursor:pointer; letter-spacing:0.2px;
+                ">단축키 OFF</button>
+                <span id="license-status"></span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 탭2: NG -->
+    <div class="tab-panel" id="tab2">
+
+        <div class="section" id="section-ng">
+            <div class="section-header">
+                <div class="accent" style="background:#8b3030;"></div>
+                <span>NG 자동 편집</span>
+            </div>
+            <div class="btn-row">
+                <div style="display:flex;gap:6px;align-items:center;padding:0 12px;">
+                    <label style="color:#aaa;font-size:11px;white-space:nowrap;">SRT 경로</label>
+                    <input type="text" id="ng-srt-path" placeholder="자동 탐색 또는 직접 입력"
+                        style="flex:1;background:#1e1e1e;color:#e0e0e0;border:1px solid #444;border-radius:4px;padding:5px 8px;font-size:11px;box-sizing:border-box;" />
+                </div>
+                <div style="font-size:10px;color:#888;line-height:1.5;padding:0 12px;">
+                    Claude.ai에서 SRT에 [NG] 태그를 붙인 후 저장하세요.<br>
+                    <span style="color:#666;">예) 번호 줄 앞에 [NG] 추가 → <code style="color:#aaa;">[NG]11</code></span>
+                </div>
+                <button class="btn" id="ng-detect-btn" style="background:#5a2020;color:#e0a0a0;border:1px solid #8b3030;">NG 구간 감지</button>
+                <div id="ng-result-box" style="margin:0 12px;padding:6px 8px;background:#1a1a1a;border-radius:4px;font-size:11px;color:#aaa;min-height:32px;max-height:200px;overflow-y:auto;">감지 결과가 여기 표시됩니다.</div>
+                <button class="btn" id="ng-remove-btn" style="background:#3a1515;color:#c07070;border:1px solid #6b2020;" disabled>NG 구간 삭제</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 탭3: 라이선스 -->
+    <div class="tab-panel" id="tab3">
+        <div class="footer" style="border-top:none;padding-top:16px;">
+            <div class="license-row" style="justify-content:center;">
+                <span id="license-status-tab3" style="font-size:11px;color:#8e8e8e;"></span>
+            </div>
+            <div class="license-row" style="margin-top:8px;">
+                <button id="license-key-btn">키 입력</button>
+                <button id="license-inquiry-btn">구매 문의</button>
+                <button id="license-deactivate-btn">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./CSInterface.js"></script>
+    <script>
+        var csInterface = new CSInterface();
+        var slideNum = 1;
+        var imgNum = 1;
+
+        // 탭 전환
+        document.querySelectorAll('.tab-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+                document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        // =====================================================
+        //  라이선스 설정
+        // =====================================================
+        var LICENSE_SERVER_URL = "https://script.google.com/macros/s/AKfycbwJLdZV5U0dZOl6lgBebpWbZLIyl1MJYZytD9e8E-AvJkN46l44UIRaPl1iO79o87ux/exec";
+        var TRIAL_DAYS = 7;
+        var _authPassed = false;
+        var _hwid = null;
+        var _authState = null; // 패널 로드 시 서버에서 받은 인증 상태 캐시
+
+        function updateLicenseStatus(text, color) {
+            var el = document.getElementById('license-status');
+            if (el) { el.textContent = text; el.style.color = color || '#666'; }
+            var el2 = document.getElementById('license-status-tab3');
+            if (el2) { el2.textContent = text; el2.style.color = color || '#8e8e8e'; }
+        }
+
+        function getExpiryDisplay(expiryDate, plan) {
+            if (!expiryDate) return { text: '라이선스 활성', color: '#666' };
+            try {
+                var expiry  = new Date(expiryDate);
+                var now     = new Date();
+                var days    = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+                var planStr = plan === 'yearly' ? '연간' : '월간';
+                var dateStr = expiry.toISOString().slice(0, 10);
+                if (days < 0 && days >= -7) return { text: '⚠ 만료 — 유예기간 ' + (7 + days) + '일 남음', color: '#e0a030' };
+                if (days < -7)             return { text: '✕ 구독 만료', color: '#e06060' };
+                if (days <= 7)             return { text: '⚠ ' + planStr + ' — 만료 ' + days + '일 전', color: '#e0a030' };
+                if (days <= 30)            return { text: '△ ' + planStr + ' — 만료 ' + days + '일 전', color: '#e0a030' };
+                return { text: planStr + ' 구독 · ' + dateStr, color: '#666' };
+            } catch (e) { return { text: '라이선스 활성', color: '#666' }; }
+        }
+
+        function checkExpiryAndNotify(state) {
+            if (!state.expiry_date) return true;
+            var expiry = new Date(state.expiry_date);
+            var now    = new Date();
+            var days   = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+            var isYearly = state.plan === 'yearly';
+
+            if (days > 30) return true;
+            if (days > 7) {
+                if (isYearly && !state.notified_30d) {
+                    alert('📅 구독 만료까지 ' + days + '일 남았습니다.\n기간 내 갱신해주세요.');
+                    state.notified_30d = true;
+                    saveStateToLocal(state);
+                }
+                return true;
+            }
+            if (days > 0) {
+                if (!state.notified_7d) {
+                    alert('⚠️ 구독 만료까지 ' + days + '일 남았습니다!\n빠른 시일 내 갱신해주세요.');
+                    state.notified_7d = true;
+                    saveStateToLocal(state);
+                }
+                return true;
+            }
+            if (days >= -7) {
+                alert('⚠️ 구독이 만료되었습니다.\n유예기간: ' + (7 + days) + '일 남았습니다.\n갱신해주세요.');
+                return true;
+            }
+            alert('❌ 구독 유예기간이 종료되었습니다.\n라이선스 키를 다시 입력해주세요.');
+            deleteLocalLicenseJS();
+            return false;
+        }
+
+        var LICENSE_PATH = (process.env.APPDATA || '').replace(/\\/g, '/') + '/PPRS/license.key';
+
+        function saveKeyToLocal(hwid, key, expiry_date, plan, email) {
+            try {
+                var fs   = cep_node.require('fs');
+                var path = cep_node.require('path');
+                var dir  = path.dirname(LICENSE_PATH);
+                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                var data = { hwid: hwid, key: key, expiry_date: expiry_date || '', plan: plan || '', email: email || '' };
+                fs.writeFileSync(LICENSE_PATH, JSON.stringify(data), 'utf8');
+            } catch (e) {}
+        }
+
+        function loadLocalLicenseJS() {
+            try {
+                var fs = cep_node.require('fs');
+                if (!fs.existsSync(LICENSE_PATH)) return null;
+                return JSON.parse(fs.readFileSync(LICENSE_PATH, 'utf8'));
+            } catch (e) { return null; }
+        }
+
+        function deleteLocalLicenseJS() {
+            try {
+                var fs = cep_node.require('fs');
+                if (fs.existsSync(LICENSE_PATH)) fs.unlinkSync(LICENSE_PATH);
+            } catch (e) {}
+        }
+
+        // UXP device.id 파일에서 HWID 읽기 (UXP와 동일한 HWID 공유)
+        var UXP_DEVICE_ID_PATHS = [
+            (process.env.APPDATA || '').replace(/\\/g, '/') + '/Adobe/UXP/PluginsStorage/PPRO/26/Developer/com.sje.pr.edit.pro/PluginData/SJE_PR_EDIT_PRO/device.id',
+            (process.env.APPDATA || '').replace(/\\/g, '/') + '/Adobe/UXP/PluginsStorage/PPRO/25/Developer/com.sje.pr.edit.pro/PluginData/SJE_PR_EDIT_PRO/device.id'
+        ];
+
+        function getHWID() {
+            return new Promise(function (resolve) {
+                if (_hwid) { resolve(_hwid); return; }
+                try {
+                    var fs = cep_node.require('fs');
+                    for (var i = 0; i < UXP_DEVICE_ID_PATHS.length; i++) {
+                        try {
+                            var id = fs.readFileSync(UXP_DEVICE_ID_PATHS[i], 'utf8').trim();
+                            if (id && /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/i.test(id)) {
+                                _hwid = id.toUpperCase();
+                                resolve(_hwid);
+                                return;
+                            }
+                        } catch (e) {}
+                    }
+                } catch (e) {}
+
+                // 폴백: WMI UUID
+                try {
+                    var exec = cep_node.require('child_process').exec;
+                    exec('powershell -NoProfile -Command "(Get-WmiObject -Class Win32_ComputerSystemProduct).UUID"',
+                        { timeout: 5000 },
+                        function (err, stdout) {
+                            var uuid = stdout ? stdout.trim() : '';
+                            if (uuid && uuid.length > 10) {
+                                _hwid = uuid.toUpperCase();
+                            } else {
+                                _hwid = 'FALLBACK_' + (process.env.COMPUTERNAME || 'UNKNOWN') + '_' + (process.env.USERNAME || 'UNKNOWN');
+                            }
+                            resolve(_hwid);
+                        }
+                    );
+                } catch (e) {
+                    _hwid = 'FALLBACK_' + (process.env.COMPUTERNAME || 'UNKNOWN') + '_' + (process.env.USERNAME || 'UNKNOWN');
+                    resolve(_hwid);
+                }
+            });
+        }
+
+        // PowerShell 임시 ps1 방식 서버 통신
+        function serverFetch(action, params) {
+            return new Promise(function (resolve, reject) {
+                try {
+                    var fs   = cep_node.require('fs');
+                    var exec = cep_node.require('child_process').exec;
+                    var os   = cep_node.require('os');
+                    var path = cep_node.require('path');
+
+                    var tmpDir  = os.tmpdir();
+                    var id      = Date.now();
+                    var ps1Path = path.join(tmpDir, 'pprs_' + id + '.ps1');
+                    var txtPath = path.join(tmpDir, 'pprs_' + id + '.txt');
+
+                    var qs = 'action=' + encodeURIComponent(action);
+                    if (params) {
+                        Object.keys(params).forEach(function (k) {
+                            qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+                        });
+                    }
+                    var url = LICENSE_SERVER_URL + '?' + qs;
+
+                    var ps1 = '[System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true};\n' +
+                              '$client = New-Object System.Net.WebClient;\n' +
+                              '$client.Encoding = [System.Text.Encoding]::UTF8;\n' +
+                              '$url = "' + url + '";\n' +
+                              'try {\n' +
+                              '    $content = $client.DownloadString($url);\n' +
+                              '    [System.IO.File]::WriteAllText("' + txtPath.replace(/\\/g, '/') + '", $content, [System.Text.Encoding]::UTF8);\n' +
+                              '} catch {\n' +
+                              '    "ERROR: $_" | Out-File "' + txtPath.replace(/\\/g, '/') + '" -Encoding UTF8;\n' +
+                              '}';
+
+                    fs.writeFileSync(ps1Path, ps1, 'utf8');
+
+                    exec('powershell -ExecutionPolicy Bypass -File "' + ps1Path + '"',
+                        { timeout: 15000 },
+                        function () {
+                            setTimeout(function () {
+                                try {
+                                    var raw = fs.readFileSync(txtPath, 'utf8')
+                                                .replace(/^\uFEFF/, '').trim();
+                                    fs.unlinkSync(txtPath);
+                                    try { fs.unlinkSync(ps1Path); } catch (e) {}
+                                    if (!raw) { reject(new Error('empty result')); return; }
+                                    try { resolve(JSON.parse(raw)); }
+                                    catch (e) { reject(e); }
+                                } catch (e) {
+                                    reject(new Error('txt not found'));
+                                }
+                            }, 300);
+                        }
+                    );
+                } catch (e) {
+                    reject(e);
+                }
+            });
+        }
+
+        // 단축키 전용 — 인증 완료 후 콜백
+        function authOnly(onAuth) {
+            if (_authPassed) { onAuth(); return; }
+            // 패널 로드 인증이 아직 진행 중이면 잠시 대기
+            setTimeout(function () {
+                if (_authPassed) { onAuth(); return; }
+                // 인증 실패 상태 → 재인증 시도
+                doInitAuth(function () { if (_authPassed) onAuth(); });
+            }, 500);
+        }
+
+        // 패널 로드 시 인증 완료 후 _authPassed = true → 이후 모든 버튼/단축키 바로 실행
+        function runWithAuth(jsxCall, btn, busyText, idleText, onDone) {
+            if (_authPassed) {
+                runJsx(jsxCall, btn, busyText, idleText, onDone);
+                return;
+            }
+            var origText = getBtnText(btn);
+            getHWID().then(function (hwid) {
+                // 이미 체험판 이메일 등록된 상태(만료 등) → 라이선스 입력창만
+                if (_authState && _authState.email) {
+                    showLicenseInput(hwid, function (ok) {
+                        if (ok) { _authPassed = true; runJsx(jsxCall, btn, busyText, idleText, onDone); }
+                        else { setBtnText(btn, origText); btn.disabled = false; }
+                    });
+                } else {
+                    // 완전 신규 → 체험판/라이선스 선택 UI
+                    showTrialEmailUI(hwid, jsxCall, btn, busyText, idleText, origText, onDone);
+                }
+            });
+        }
+
+        // 서버에서 인증 상태 확인 — 패널 로드 시 1회 실행
+        function doInitAuth(onDone) {
+            getHWID().then(function (hwid) {
+                var local = loadLocalLicenseJS();
+                var licensed = !!(local && local.hwid === hwid && local.key);
+                var state = local ? {
+                    hwid: hwid, licensed: licensed,
+                    key: licensed ? (local.key || '') : '',
+                    email: local.email || '',
+                    expiry_date: licensed ? (local.expiry_date || '') : '',
+                    plan: local.plan || '',
+                    notified_30d: local.notified_30d || false,
+                    notified_7d: local.notified_7d || false
+                } : { hwid: hwid, licensed: false, key: '', email: '', expiry_date: '', plan: '' };
+                _authState = state;
+                (function() {
+
+                    // 정식 라이선스 키 있음 → 서버로 구독 상태 확인
+                    if (state.licensed) {
+                        serverFetch('check_subscription', { hwid: hwid, key: state.key })
+                        .then(function (subRes) {
+                            if (subRes.status === 'active') {
+                                var serverState = { expiry_date: subRes.expiry_date || '', plan: subRes.plan || state.plan };
+                                var disp = getExpiryDisplay(serverState.expiry_date, serverState.plan);
+                                updateLicenseStatus(disp.text, disp.color);
+                                if (!checkExpiryAndNotify(serverState)) { if (onDone) onDone(); return; }
+                                _authPassed = true;
+                            } else if (subRes.status === 'grace_period') {
+                                updateLicenseStatus('⚠ 유예기간 ' + subRes.grace_days_left + '일 남음', '#e0a030');
+                                alert('⚠️ 구독이 만료되었습니다.\n유예기간: ' + subRes.grace_days_left + '일 남았습니다.');
+                                _authPassed = true;
+                            } else if (subRes.status === 'expired') {
+                                alert('❌ 구독이 만료되었습니다.\n라이선스 키를 다시 입력해주세요.');
+                                deleteLocalLicenseJS();
+                                updateLicenseStatus('구독 만료', '#e06060');
+                            } else {
+                                updateLicenseStatus('인증 실패', '#e06060');
+                            }
+                            if (onDone) onDone();
+                        })
+                        .catch(function () {
+                            // 오프라인 → 로컬 만료일로 폴백
+                            var disp = getExpiryDisplay(state.expiry_date, state.plan);
+                            updateLicenseStatus(disp.text + ' (오프라인)', '#888');
+                            if (checkExpiryAndNotify(state)) _authPassed = true;
+                            if (onDone) onDone();
+                        });
+                        return;
+                    }
+
+                    // 체험판 이메일 있음 → 서버로 체험판 상태 확인
+                    if (state.email) {
+                        serverFetch('trial_check', { email: state.email, hwid: hwid })
+                        .then(function (trialRes) {
+                            handleTrialResult(trialRes, hwid, state.email, null, null, '', '', '', onDone);
+                        })
+                        .catch(function () {
+                            updateLicenseStatus('체험판 (오프라인)', '#888');
+                            _authPassed = true;
+                            if (onDone) onDone();
+                        });
+                        return;
+                    }
+
+                    // 아무것도 없음 → 딜레이 후 웰컴 UI 표시
+                    updateLicenseStatus('미인증', '#666');
+                    setTimeout(function () {
+                        showTrialEmailUI(hwid, null, null, '', '', '', onDone);
+                    }, 800);
+                })();
+            });
+        }
+
+        // email: 이미 알고 있는 이메일 (trial_check 응답 처리용)
+        function handleTrialResult(trialRes, hwid, email, jsxCall, btn, busyText, idleText, origText, onDone) {
+            function resetBtn() { if (btn && origText !== '') { setBtnText(btn, origText); btn.disabled = false; } }
+            function proceed() {
+                if (jsxCall) { runJsx(jsxCall, btn, busyText, idleText, onDone); }
+                else if (typeof onDone === 'function') { onDone(); }
+            }
+
+            if (trialRes.status === 'trial_active' || trialRes.status === 'trial_already_active') {
+                var remaining = trialRes.remaining || trialRes.daysLeft || 0;
+                // 이메일만 로컬 저장 (다음 로드 시 trial_check용)
+                var data = { hwid: hwid, email: email, plan: 'trial' };
+                saveKeyToLocal(data.hwid, data.key || '', data.expiry_date || '', data.plan || '', data.email || '');
+                updateLicenseStatus('체험판 · ' + remaining + '일 남음', '#6abf6a');
+                _authPassed = true;
+                proceed();
+
+            } else if (trialRes.status === 'trial_expired') {
+                updateLicenseStatus('체험판 만료', '#e05555');
+                alert('⏰ 체험 기간이 만료되었습니다. 라이선스 키를 등록하세요.');
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+
+            } else if (trialRes.status === 'trial_not_found' || trialRes.status === 'trial_email_used') {
+                // 이메일이 없거나 다른 기기 사용 → 라이선스 입력
+                if (trialRes.status === 'trial_email_used') {
+                    alert('이미 다른 기기에서 체험판을 사용한 이메일입니다.\n라이선스 키를 입력하세요.');
+                }
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+
+            } else {
+                var errMsg = trialRes.message ? (trialRes.status + ': ' + trialRes.message) : trialRes.status;
+                alert('인증 오류: ' + errMsg + '\n\n라이선스 키를 입력하거나, 인터넷 연결 후 다시 시도하세요.');
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+            }
+        }
+
+        // 이메일 입력 → 코드 발송 → 코드 확인 UI (UXP 웰컴 모달 대응)
+        function showTrialEmailUI(hwid, jsxCall, btn, busyText, idleText, origText, onDone) {
+            function resetBtn() { if (btn && origText !== '') { setBtnText(btn, origText); btn.disabled = false; } }
+            function proceed() {
+                if (jsxCall) { runJsx(jsxCall, btn, busyText, idleText, onDone); }
+                else if (typeof onDone === 'function') { onDone(); }
+            }
+
+            // Step 1: 체험판 or 라이선스 선택
+            var choice = confirm(
+                'SJE NG Cutter에 오신 것을 환영합니다!\n\n' +
+                '확인: ' + TRIAL_DAYS + '일 무료 체험 시작\n' +
+                '취소: 라이선스 키 입력'
+            );
+            if (!choice) {
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; proceed(); }
+                    else resetBtn();
+                });
+                return;
+            }
+
+            // Step 2: 이메일 입력
+            var email = prompt('이메일 주소를 입력하세요.\n인증 코드를 발송합니다.');
+            if (!email || !email.trim()) { resetBtn(); return; }
+            email = email.trim();
+
+            // 코드 발송
+            serverFetch('trial_request_code', { email: email, hwid: hwid })
+            .then(function (res) {
+                if (res.status === 'code_sent') {
+                    // Step 3: 코드 입력
+                    var code = prompt('[' + email + '] 로 발송된 6자리 인증 코드를 입력하세요.');
+                    if (!code || !code.trim()) { resetBtn(); return; }
+
+                    serverFetch('trial_verify_code', { email: email, hwid: hwid, code: code.trim() })
+                    .then(function (vRes) {
+                        if (vRes.status === 'verified' || vRes.status === 'trial_already_active') {
+                            var remaining = vRes.remaining || 7;
+                            var data = { hwid: hwid, email: email, plan: 'trial' };
+                            saveKeyToLocal(data.hwid, data.key || '', data.expiry_date || '', data.plan || '', data.email || '');
+                            updateLicenseStatus('체험판 · ' + remaining + '일 남음', '#6abf6a');
+                            _authPassed = true;
+                            proceed();
+                        } else if (vRes.status === 'invalid_code') {
+                            alert('인증 코드가 올바르지 않습니다.');
+                            resetBtn();
+                        } else if (vRes.status === 'code_expired') {
+                            alert('코드가 만료되었습니다. 다시 시도하세요.');
+                            resetBtn();
+                        } else {
+                            alert('오류: ' + (vRes.message || vRes.status));
+                            resetBtn();
+                        }
+                    })
+                    .catch(function () { alert('서버 연결 실패'); resetBtn(); });
+
+                } else if (res.status === 'trial_already_active') {
+                    // 같은 이메일+HWID → 바로 통과
+                    var data = { hwid: hwid, email: email, plan: 'trial' };
+                    saveKeyToLocal(data.hwid, data.key || '', data.expiry_date || '', data.plan || '', data.email || '');
+                    updateLicenseStatus('체험판', '#6abf6a');
+                    _authPassed = true;
+                    proceed();
+                } else if (res.status === 'trial_email_used') {
+                    alert('이미 다른 기기에서 체험판을 사용한 이메일입니다.\n라이선스 키를 입력하세요.');
+                    showLicenseInput(hwid, function (ok) {
+                        if (ok) { _authPassed = true; proceed(); }
+                        else resetBtn();
+                    });
+                } else if (res.status === 'code_already_sent') {
+                    // 이미 코드가 발송된 상태 → 바로 코드 입력으로
+                    var code2 = prompt('이미 코드가 발송되어 있습니다.\n[' + email + '] 로 발송된 6자리 코드를 입력하세요.');
+                    if (!code2 || !code2.trim()) { resetBtn(); return; }
+                    serverFetch('trial_verify_code', { email: email, hwid: hwid, code: code2.trim() })
+                    .then(function (vRes) {
+                        if (vRes.status === 'verified' || vRes.status === 'trial_already_active') {
+                            var remaining = vRes.remaining || 7;
+                            var data = { hwid: hwid, email: email, plan: 'trial' };
+                            saveKeyToLocal(data.hwid, data.key || '', data.expiry_date || '', data.plan || '', data.email || '');
+                            updateLicenseStatus('체험판 · ' + remaining + '일 남음', '#6abf6a');
+                            _authPassed = true;
+                            proceed();
+                        } else {
+                            alert('오류: ' + (vRes.message || vRes.status));
+                            resetBtn();
+                        }
+                    })
+                    .catch(function () { alert('서버 연결 실패'); resetBtn(); });
+                } else {
+                    alert('오류: ' + (res.message || res.status));
+                    resetBtn();
+                }
+            })
+            .catch(function () { alert('서버 연결 실패'); resetBtn(); });
+        }
+
+        function showLicenseInput(hwid, callback) {
+            var key = prompt('구매한 라이선스 키를 입력하세요:');
+            if (!key) { callback(false); return; }
+            serverFetch('activate', { hwid: hwid, key: key.trim() }).then(function (res) {
+                if (res.status === 'activated' || res.status === 'already_active') {
+                    var disp = getExpiryDisplay(res.expiry_date || '', res.plan || '');
+                    updateLicenseStatus(disp.text, disp.color);
+                    saveKeyToLocal(hwid, key.trim(), res.expiry_date || '', res.plan || '');
+                    csInterface.evalScript('getAuthState("' + hwid + '")', function () {
+                        alert('✅ 라이선스 활성화 완료!'); callback(true);
+                    });
+                } else if (res.status === 'invalid_key') {
+                    alert('❌ 유효하지 않은 키입니다.'); callback(false);
+                } else if (res.status === 'max_reached') {
+                    alert('❌ 최대 등록 기기 수(' + res.max + '대)를 초과했습니다.'); callback(false);
+                } else {
+                    alert('오류: ' + (res.message || res.status)); callback(false);
+                }
+            }).catch(function () { alert('서버 연결 실패'); callback(false); });
+        }
+
+        // 패널 로드 시 서버 인증 1회 실행
+        doInitAuth(null);
+
+        // 키 입력 버튼
+        document.getElementById('license-key-btn').onclick = function () {
+            getHWID().then(function (hwid) {
+                showLicenseInput(hwid, function (ok) {
+                    if (ok) { _authPassed = true; }
+                });
+            });
+        };
+
+        // 구매 문의 모달
+        var _inquiryOverlay = null;
+        function showInquiryModal() {
+            if (_inquiryOverlay) { _inquiryOverlay.style.display = 'flex'; return; }
+
+            var ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:30px;box-sizing:border-box;';
+
+            var p = document.createElement('div');
+            p.style.cssText = 'background:#252525;border-radius:8px;padding:16px;width:90%;max-width:320px;box-sizing:border-box;';
+
+            var title = document.createElement('div');
+            title.textContent = '구매 문의';
+            title.style.cssText = 'font-weight:700;color:#eee;margin-bottom:14px;font-size:13px;';
+
+            function makeField(label, isTextarea) {
+                var wrap = document.createElement('div');
+                wrap.style.cssText = 'margin-bottom:10px;';
+                var lbl = document.createElement('div');
+                lbl.textContent = label;
+                lbl.style.cssText = 'color:#aaa;font-size:11px;margin-bottom:4px;';
+                var inp = isTextarea ? document.createElement('textarea') : document.createElement('input');
+                if (!isTextarea) inp.type = 'text';
+                inp.style.cssText = 'width:100%;background:#1e1e1e;color:#e0e0e0;border:1px solid #444;border-radius:4px;padding:6px 8px;font-size:12px;box-sizing:border-box;' + (isTextarea ? 'height:60px;resize:vertical;' : '');
+                wrap.appendChild(lbl); wrap.appendChild(inp);
+                return { wrap: wrap, inp: inp };
+            }
+
+            var nameF  = makeField('이름 *');
+            var emailF = makeField('이메일 *');
+
+            var planWrap = document.createElement('div');
+            planWrap.style.cssText = 'margin-bottom:10px;';
+            var planLbl = document.createElement('div');
+            planLbl.textContent = '플랜 선택';
+            planLbl.style.cssText = 'color:#aaa;font-size:11px;margin-bottom:4px;';
+            var planSel = document.createElement('select');
+            planSel.style.cssText = 'width:100%;background:#1e1e1e;color:#e0e0e0;border:1px solid #444;border-radius:4px;padding:6px 8px;font-size:12px;box-sizing:border-box;';
+            [['monthly','월간 플랜'],['yearly','연간 플랜']].forEach(function(item) {
+                var o = document.createElement('option'); o.value = item[0]; o.textContent = item[1]; planSel.appendChild(o);
+            });
+            planWrap.appendChild(planLbl); planWrap.appendChild(planSel);
+
+            var msgF = makeField('문의 내용 (선택)', true);
+            msgF.wrap.style.marginBottom = '14px';
+
+            var br = document.createElement('div');
+            br.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+
+            var cancelBtn = document.createElement('button');
+            cancelBtn.textContent = '취소';
+            cancelBtn.style.cssText = 'background:#3a3a3a;color:#aaa;border:1px solid #4b4b4b;border-radius:5px;padding:7px 14px;cursor:pointer;font-size:12px;';
+            cancelBtn.onclick = function () { _inquiryOverlay.style.display = 'none'; };
+
+            var sendBtn = document.createElement('button');
+            sendBtn.textContent = '보내기';
+            sendBtn.style.cssText = 'background:#4b4b4b;color:#ccc;border:1px solid #5a5a5a;border-radius:5px;padding:7px 14px;cursor:pointer;font-size:12px;';
+            sendBtn.onclick = function () {
+                var name    = nameF.inp.value.replace(/^\s+|\s+$/g, '');
+                var email   = emailF.inp.value.replace(/^\s+|\s+$/g, '');
+                var plan    = planSel.value;
+                var message = msgF.inp.value.replace(/^\s+|\s+$/g, '');
+                if (!name)  { alert('이름을 입력해주세요.'); return; }
+                if (!email || email.indexOf('@') < 0) { alert('올바른 이메일 주소를 입력해주세요.'); return; }
+                sendBtn.disabled = true; sendBtn.textContent = '전송 중...';
+                serverFetch('inquiry', { name: name, email: email, plan: plan, message: message })
+                .then(function (res) {
+                    sendBtn.disabled = false; sendBtn.textContent = '보내기';
+                    if (res.status === 'sent') {
+                        _inquiryOverlay.style.display = 'none';
+                        nameF.inp.value = ''; emailF.inp.value = ''; msgF.inp.value = '';
+                        alert('문의가 전송되었습니다!\n빠른 시일 내에 답변 드리겠습니다.');
+                    } else {
+                        alert('전송 실패: ' + (res.message || res.status));
+                    }
+                })
+                .catch(function () {
+                    sendBtn.disabled = false; sendBtn.textContent = '보내기';
+                    alert('서버 연결 실패');
+                });
+            };
+
+            br.appendChild(cancelBtn); br.appendChild(sendBtn);
+            p.appendChild(title);
+            p.appendChild(nameF.wrap); p.appendChild(emailF.wrap);
+            p.appendChild(planWrap); p.appendChild(msgF.wrap);
+            p.appendChild(br);
+            ov.appendChild(p);
+            document.body.appendChild(ov);
+            _inquiryOverlay = ov;
+        }
+
+        document.getElementById('license-inquiry-btn').onclick = showInquiryModal;
+
+        // 삭제 버튼 (PC 이전용 라이선스 해제)
+        document.getElementById('license-deactivate-btn').onclick = function () {
+            getHWID().then(function (hwid) {
+                csInterface.evalScript('getAuthState("' + hwid + '")', function (res) {
+                    var state;
+                    try { state = JSON.parse(res); } catch (e) { state = {}; }
+                    if (!state.key) {
+                        alert('등록된 라이선스 키가 없습니다.');
+                        return;
+                    }
+                    var confirmed = confirm('이 PC의 라이선스를 해제합니다.\n계속하시겠습니까?');
+                    if (!confirmed) return;
+                    serverFetch('deactivate', { hwid: hwid, key: state.key })
+                    .then(function (res) {
+                        var msg = res.status === 'deactivated'
+                            ? '라이선스가 해제되었습니다.'
+                            : '서버 해제 실패: ' + (res.message || res.status) + '\n로컬 라이선스는 초기화되었습니다.';
+                        deleteLocalLicenseJS(); _authPassed = false; updateLicenseStatus('', ''); alert(msg);
+                    })
+                    .catch(function () {
+                        deleteLocalLicenseJS(); _authPassed = false; updateLicenseStatus('', '');
+                        alert('서버 연결 실패. 로컬 라이선스는 초기화되었습니다.');
+                    });
+                });
+            });
+        };
+
+        function updateMarkerBtn() {
+            setBtnText(document.getElementById('razor-marker-btn'), '[Slide ' + slideNum + ']');
+        }
+
+        function updateImgBtn() {
+            setBtnText(document.getElementById('img-marker-btn'), '[#' + imgNum + ']');
+        }
+
+        // 슬라이드 시작 번호 변경
+        document.getElementById('slide-start-input').oninput = function () {
+            var v = parseInt(this.value, 10);
+            if (!isNaN(v) && v >= 1) {
+                slideNum = v;
+                updateMarkerBtn();
+            }
+        };
+
+        // 이미지 시작 번호 변경
+        document.getElementById('img-start-input').oninput = function () {
+            var v = parseInt(this.value, 10);
+            if (!isNaN(v) && v >= 1) {
+                imgNum = v;
+                updateImgBtn();
+            }
+        };
+
+        function getBtnText(btn) {
+            var sp = btn.querySelector('.btn-inner > span:first-child');
+            return sp ? sp.innerText : btn.innerText;
+        }
+        function setBtnText(btn, text) {
+            var sp = btn.querySelector('.btn-inner > span:first-child');
+            if (sp) { sp.innerText = text; } else { btn.innerText = text; }
+        }
+
+        // onDone: JSX 완료 후 추가 작업 콜백 (선택)
+        function runJsx(jsxCall, btn, busyText, idleText, onDone) {
+            setBtnText(btn, busyText);
+            btn.disabled  = true;
+            csInterface.evalScript(jsxCall, function () {
+                setBtnText(btn, idleText);
+                btn.disabled  = false;
+                if (typeof onDone === 'function') onDone();
+            });
+        }
+
+        // 자막 기반 자동 자르기
+        document.getElementById('auto-razor-btn').onclick = function () {
+            runWithAuth('$._PPP_.autoRazorTracks()', this,
+                '⏳ 처리 중...', '자막 위치로 자동 자르기');
+        };
+
+        // 자르기만
+        document.getElementById('razor-btn').onclick = function () {
+            runWithAuth('$._PPP_.razorAtPlayhead()', this,
+                '자르는 중...', '현재 헤드 위치 자르기');
+        };
+
+        // 자르기 + 마커 (완료 후 slideNum +1, imgNum 초기화)
+        document.getElementById('razor-marker-btn').onclick = function () {
+            var btn = this;
+            var markerName = '[Slide ' + slideNum + ']';
+            var jsxCall = '$._PPP_.razorAndMark(' + JSON.stringify(markerName) + ')';
+            var idleText = '[Slide ' + slideNum + ']';
+            runWithAuth(jsxCall, btn, '⏳ 처리 중...', idleText, function () {
+                slideNum++;
+                document.getElementById('slide-start-input').value = slideNum;
+                updateMarkerBtn();
+                imgNum = 1;
+                document.getElementById('img-start-input').value = imgNum;
+                updateImgBtn();
+            });
+        };
+
+        // 이미지 번호 버튼 (완료 후 imgNum +1)
+        document.getElementById('img-marker-btn').onclick = function () {
+            var btn = this;
+            var imgTag = '#' + imgNum;
+            var jsxCall = '$._PPP_.appendImgToLastMarker(' + JSON.stringify(imgTag) + ')';
+            var idleText = '[#' + imgNum + ']';
+            runWithAuth(jsxCall, btn, '⏳ 처리 중...', idleText, function () {
+                imgNum++;
+                document.getElementById('img-start-input').value = imgNum;
+                updateImgBtn();
+            });
+        };
+
+        // 앵글 태그 버튼
+        ['front', 'left', 'right'].forEach(function (key) {
+            var nameMap = { front: '정면', left: '좌측', right: '우측' };
+            var angleName = nameMap[key];
+            document.getElementById('angle-' + key + '-btn').onclick = function () {
+                runWithAuth('$._PPP_.appendAngleToLastMarker(' + JSON.stringify(angleName) + ')',
+                    this, '⏳...', angleName);
+            };
+        });
+
+        // 앵글 스위칭
+        document.getElementById('switch-btn').onclick = function () {
+            runWithAuth('$._PPP_.autoSwitchAngle()', this,
+                '⏳ 스위칭 중...', '앵글 자동 스위칭');
+        };
+
+        // 이미지 자동 배치
+        document.getElementById('image-btn').onclick = function () {
+            runWithAuth('$._PPP_.autoPlaceImages()', this,
+                '배치 중...', '이미지 자동 배치');
+        };
+
+        // =====================================================
+        //  전역 단축키 (PowerShell 백그라운드 → 파일 폴링)
+        //  F1 : [Slide N] 마커
+        //  F2 : 좌측
+        //  F3 : 정면
+        //  F4 : 우측
+        //  F5 : [#N] 이미지 번호
+        //  F6 : 앵글 자동 스위칭
+        //  F7 : 이미지 자동 배치
+        // =====================================================
+        (function () {
+            var fs      = cep_node.require('fs');
+            var path    = cep_node.require('path');
+            var os      = cep_node.require('os');
+            var exec    = cep_node.require('child_process').exec;
+
+            var tmpDir   = os.tmpdir();
+            var keyFile  = path.join(tmpDir, 'pprs_hotkey.txt');
+            var pidFile  = path.join(tmpDir, 'pprs_hotkey_ps.pid');
+            var ps1File  = path.join(tmpDir, 'pprs_hotkey.ps1');
+            var _polling = null;
+            var _busy    = false;
+
+            // PowerShell 스크립트 — F1~F6 전역 감지 후 파일 기록
+            var ps1 = [
+                'Add-Type -AssemblyName System.Windows.Forms;',
+                '$keys = @{',
+                '  [System.Windows.Forms.Keys]::F1 = "F1";',
+                '  [System.Windows.Forms.Keys]::F2 = "F2";',
+                '  [System.Windows.Forms.Keys]::F3 = "F3";',
+                '  [System.Windows.Forms.Keys]::F4 = "F4";',
+                '  [System.Windows.Forms.Keys]::F5 = "F5";',
+                '  [System.Windows.Forms.Keys]::F6 = "F6"',
+                '};',
+                '$keyFile = "' + keyFile.replace(/\\/g, '/') + '";',
+                '$prev = @{};',
+                'foreach ($k in $keys.Keys) { $prev[$k] = $false; }',
+                'while ($true) {',
+                '  foreach ($k in $keys.Keys) {',
+                '    $down = [System.Windows.Forms.Control]::IsKeyLocked($k) -or',
+                '            ([System.Windows.Input.Keyboard]::IsKeyDown([System.Windows.Input.Key]::$($keys[$k])));',
+                '    $state = [System.Runtime.InteropServices.Marshal]::GetAsyncKeyState($k) -band 0x8000;',
+                '    if ($state -and -not $prev[$k]) {',
+                '      [System.IO.File]::WriteAllText($keyFile, $keys[$k]);',
+                '      $prev[$k] = $true;',
+                '    } elseif (-not $state) {',
+                '      $prev[$k] = $false;',
+                '    }',
+                '  }',
+                '  Start-Sleep -Milliseconds 50;',
+                '}'
+            ].join('\n');
+
+            // 단축키 감지 (토글 ON 상태일 때만 실행)
+            var ps1Simple = [
+                'Add-Type @"',
+                'using System;',
+                'using System.Runtime.InteropServices;',
+                'public class HotKey {',
+                '    [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int vKey);',
+                '}',
+                '"@',
+                '$keyFile = "' + keyFile.replace(/\\/g, '/') + '";',
+                '$map = @{ 0x70="F1"; 0x71="F2"; 0x72="F3"; 0x73="F4"; 0x74="F5"; 0x75="F6"; 0x76="F7"; 0xC0="BACKTICK" };',
+                '$prev = @{};',
+                'foreach ($k in $map.Keys) { $prev[$k] = $false; }',
+                'while ($true) {',
+                '  foreach ($k in $map.Keys) {',
+                '    $s = [HotKey]::GetAsyncKeyState($k) -band 0x8000;',
+                '    if ($s -and -not $prev[$k]) {',
+                '      [System.IO.File]::WriteAllText($keyFile, $map[$k]);',
+                '      $prev[$k] = $true;',
+                '    } elseif (-not $s) { $prev[$k] = $false; }',
+                '  }',
+                '  Start-Sleep -Milliseconds 50;',
+                '}'
+            ].join('\n');
+
+            function startHotkeyListener() {
+                try {
+                    // 기존 파일 정리
+                    if (fs.existsSync(keyFile))  fs.unlinkSync(keyFile);
+                    if (fs.existsSync(ps1File))  fs.unlinkSync(ps1File);
+
+                    fs.writeFileSync(ps1File, ps1Simple, 'utf8');
+
+                    var proc = exec(
+                        'powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + ps1File + '"',
+                        function () {}
+                    );
+
+                    // PID 저장 (패널 종료 시 kill용)
+                    if (proc && proc.pid) {
+                        fs.writeFileSync(pidFile, String(proc.pid), 'utf8');
+                    }
+
+                    // 200ms 폴링
+                    _polling = setInterval(function () {
+                        if (_busy) return;
+                        try {
+                            if (!fs.existsSync(keyFile)) return;
+                            var key = fs.readFileSync(keyFile, 'utf8').trim();
+                            if (!key) return;
+                            fs.unlinkSync(keyFile);
+                            handleHotkey(key);
+                        } catch (e) {}
+                    }, 200);
+
+                    console.log('[PPRS] 전역 단축키 리스너 시작 (F1~F6)');
+                } catch (e) {
+                    console.warn('[PPRS] 단축키 리스너 시작 실패:', e.message);
+                }
+            }
+
+            function stopHotkeyListener() {
+                if (_polling) { clearInterval(_polling); _polling = null; }
+                try {
+                    if (fs.existsSync(pidFile)) {
+                        var pid = fs.readFileSync(pidFile, 'utf8').trim();
+                        exec('taskkill /PID ' + pid + ' /T /F', function () {});
+                        fs.unlinkSync(pidFile);
+                    }
+                    if (fs.existsSync(ps1File)) fs.unlinkSync(ps1File);
+                    if (fs.existsSync(keyFile)) fs.unlinkSync(keyFile);
+                } catch (e) {}
+            }
+
+            function handleHotkey(key) {
+                _busy = true;
+                setTimeout(function () { _busy = false; }, 300); // 디바운스
+
+                // 미인증 상태 — 인증만 완료 후 동일 키 재실행
+                if (!_authPassed) {
+                    authOnly(function () { handleHotkey(key); });
+                    _busy = false;
+                    return;
+                }
+
+                if (key === 'F1') {
+                    // [Slide N] 마커
+                    var btn = document.getElementById('razor-marker-btn');
+                    var markerName = '[Slide ' + slideNum + ']';
+                    setBtnText(btn, '처리 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.razorAndMark(' + JSON.stringify(markerName) + ')', function () {
+                        slideNum++;
+                        document.getElementById('slide-start-input').value = slideNum;
+                        updateMarkerBtn();
+                        imgNum = 1;
+                        document.getElementById('img-start-input').value = imgNum;
+                        updateImgBtn();
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F2') {
+                    // 정면
+                    var btn = document.getElementById('angle-front-btn');
+                    setBtnText(btn, '...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendAngleToLastMarker("정면")', function () {
+                        setBtnText(btn, '정면');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F3') {
+                    // 우측
+                    var btn = document.getElementById('angle-right-btn');
+                    setBtnText(btn, '...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendAngleToLastMarker("우측")', function () {
+                        setBtnText(btn, '우측');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F4') {
+                    // 좌측
+                    var btn = document.getElementById('angle-left-btn');
+                    setBtnText(btn, '...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendAngleToLastMarker("좌측")', function () {
+                        setBtnText(btn, '좌측');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F5') {
+                    // [#N] 이미지 번호
+                    var btn = document.getElementById('img-marker-btn');
+                    var imgTag = '#' + imgNum;
+                    setBtnText(btn, '처리 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.appendImgToLastMarker(' + JSON.stringify(imgTag) + ')', function () {
+                        imgNum++;
+                        document.getElementById('img-start-input').value = imgNum;
+                        updateImgBtn();
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F6') {
+                    // 앵글 자동 스위칭
+                    var btn = document.getElementById('switch-btn');
+                    setBtnText(btn, '처리 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.autoSwitchAngle()', function () {
+                        setBtnText(btn, '앵글 자동 스위칭');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'F7') {
+                    // 이미지 자동 배치
+                    var btn = document.getElementById('image-btn');
+                    setBtnText(btn, '배치 중...');
+                    btn.disabled = true;
+                    csInterface.evalScript('$._PPP_.autoPlaceImages()', function () {
+                        setBtnText(btn, '이미지 자동 배치');
+                        btn.disabled = false;
+                        _busy = false;
+                    });
+
+                } else if (key === 'BACKTICK') {
+                    // 현재 헤드 위치 자르기
+                    var btn = document.getElementById('razor-btn');
+                    runWithAuth('$._PPP_.razorAtPlayhead()', btn, '자르는 중...', '현재 헤드 위치 자르기', function () {
+                        _busy = false;
+                    });
+
+                } else {
+                    _busy = false;
+                }
+            }
+
+            // 토글 버튼
+            var _hotkeyOn = false;
+            var toggleBtn = document.getElementById('hotkey-toggle');
+
+            toggleBtn.onclick = function () {
+                if (_hotkeyOn) {
+                    stopHotkeyListener();
+                    _hotkeyOn = false;
+                    toggleBtn.innerText = '단축키 OFF';
+                    toggleBtn.style.background = '#333';
+                    toggleBtn.style.color = '#666';
+                    toggleBtn.style.borderColor = '#444';
+                } else {
+                    startHotkeyListener();
+                    _hotkeyOn = true;
+                    toggleBtn.innerText = '단축키 ON';
+                    toggleBtn.style.background = '#1a3a1a';
+                    toggleBtn.style.color = '#6abf6a';
+                    toggleBtn.style.borderColor = '#2d6a2d';
+                }
+            };
+
+            // 패널 언로드 시 PowerShell 종료
+            window.addEventListener('beforeunload', function () {
+                stopHotkeyListener();
+            });
+
+            // ── NG 자동 편집 ──────────────────────────────
+            var _ngRanges = null;
+
+            function getNgSrtPath(cb) {
+                var manual = document.getElementById('ng-srt-path').value.trim().replace(/^["']+|["']+$/g, '');
+                document.getElementById('ng-srt-path').value = manual;
+                if (manual) { cb(manual); return; }
+                csInterface.evalScript('$._PPP_.findSrtInProject()', function(res) {
+                    var p = res && res !== 'undefined' && res !== 'null' ? res.replace(/^"|"$/g,'') : '';
+                    document.getElementById('ng-srt-path').value = p;
+                    cb(p);
+                });
+            }
+
+            document.getElementById('ng-detect-btn').onclick = function () {
+                var box = document.getElementById('ng-result-box');
+                box.textContent = '탐색 중...';
+                getNgSrtPath(function(srtPath) {
+                    if (!srtPath) { box.textContent = '❌ SRT 파일을 찾을 수 없습니다.'; return; }
+                    csInterface.evalScript('JSON.stringify($._PPP_.parseNgTaggedSrt("' + srtPath.replace(/\\/g,'/') + '"))', function(res) {
+                        try { _ngRanges = JSON.parse(res); } catch(e) { box.textContent = '❌ SRT 파싱 실패'; return; }
+                        if (_ngRanges.length === 0) {
+                            box.textContent = '✅ [NG] 태그 없음 — Claude.ai에서 SRT에 [NG] 태그를 붙여주세요.';
+                            document.getElementById('ng-remove-btn').disabled = true;
+                        } else {
+                            box.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+                                '<span style="color:#aaa;">⚠ NG 구간 ' + _ngRanges.length + '개</span>' +
+                                '<label style="color:#888;font-size:10px;cursor:pointer;margin-left:auto;">' +
+                                '<input type="checkbox" id="ng-check-all" style="margin-right:3px;">전체선택</label></div>' +
+                                _ngRanges.map(function(r, i) {
+                                    var mm = Math.floor(r.start / 60), ss = (r.start % 60).toFixed(1);
+                                    var em = Math.floor(r.end / 60),   es = (r.end   % 60).toFixed(1);
+                                    var label = (mm > 0 ? mm + 'm ' : '') + ss + 's ~ ' + (em > 0 ? em + 'm ' : '') + es + 's';
+                                    var preview = (r.text || '').slice(0, 40) + (r.text && r.text.length > 40 ? '…' : '');
+                                    return '<div data-idx="' + i + '" style="display:flex;align-items:flex-start;gap:6px;padding:5px 6px;margin:2px 0;background:#2a1a1a;border-radius:3px;border:1px solid #3a2020;line-height:1.4;">' +
+                                        '<input type="checkbox" class="ng-chk" data-idx="' + i + '" style="margin-top:2px;flex-shrink:0;cursor:pointer;">' +
+                                        '<div style="flex:1;cursor:pointer;" class="ng-row-label">' +
+                                        '<span style="color:#e08080;font-weight:700;">' + (i+1) + '.</span> ' +
+                                        '<span style="color:#ddd;">' + label + '</span>' +
+                                        (preview ? '<br><span style="color:#888;font-size:10px;">' + preview + '</span>' : '') +
+                                        '</div></div>';
+                                }).join('');
+
+                            // 전체선택
+                            document.getElementById('ng-check-all').addEventListener('change', function() {
+                                box.querySelectorAll('.ng-chk').forEach(function(c) { c.checked = this.checked; }.bind(this));
+                            });
+
+                            // 라벨 클릭 → 플레이헤드 이동
+                            box.querySelectorAll('.ng-row-label').forEach(function(el) {
+                                el.addEventListener('click', function() {
+                                    var idx = parseInt(this.closest('[data-idx]').dataset.idx);
+                                    var r = _ngRanges[idx];
+                                    csInterface.evalScript('$._PPP_.movePlayheadTo(' + r.start + ')');
+                                    box.querySelectorAll('[data-idx]').forEach(function(e) { e.style.borderColor = '#3a2020'; });
+                                    this.closest('[data-idx]').style.borderColor = '#e08080';
+                                });
+                            });
+
+                            document.getElementById('ng-remove-btn').disabled = false;
+                        }
+                    });
+                });
+            };
+
+            document.getElementById('ng-remove-btn').onclick = function () {
+                if (!_ngRanges || _ngRanges.length === 0) return;
+                var box = document.getElementById('ng-result-box');
+                var checked = box.querySelectorAll('.ng-chk:checked');
+                if (checked.length === 0) { alert('삭제할 구간을 체크해주세요.'); return; }
+                var selected = [];
+                checked.forEach(function(c) { selected.push(_ngRanges[parseInt(c.dataset.idx)]); });
+                if (!confirm('선택된 NG 구간 ' + selected.length + '개를 삭제합니다.\n계속하시겠습니까?')) return;
+                box.textContent = '삭제 중...';
+                csInterface.evalScript('$._PPP_.removeNgClips(' + JSON.stringify(JSON.stringify(selected)) + ', false)', function(res) {
+                    var result;
+                    try { result = JSON.parse(res); } catch(e) { result = { success: false, message: res }; }
+                    box.textContent = result.success ? ('✅ ' + result.count + '개 구간 삭제 완료') : ('❌ ' + result.message);
+                    document.getElementById('ng-remove-btn').disabled = true;
+                    _ngRanges = null;
+                });
+            };
+
+            // PPT 마커 일괄 삽입
+            // 드래그앤드롭으로 JSON 경로 입력
+            (function() {
+                var inp = document.getElementById('ppt-marker-json-path');
+                inp.addEventListener('dragover', function(e) { e.preventDefault(); e.stopPropagation(); });
+                inp.addEventListener('drop', function(e) {
+                    e.preventDefault(); e.stopPropagation();
+                    var files = e.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        inp.value = files[0].path || files[0].name;
+                    }
+                });
+            })();
+
+            document.getElementById('ppt-marker-insert-btn').onclick = function () {
+                var jsonPath = document.getElementById('ppt-marker-json-path').value.trim().replace(/^["']+|["']+$/g, '');
+                if (!jsonPath) { alert('마커 JSON 경로를 입력하세요.'); return; }
+                var fs = cep_node.require('fs');
+                if (!fs.existsSync(jsonPath)) { alert('파일을 찾을 수 없습니다:\n' + jsonPath); return; }
+                var jsonStr;
+                try { jsonStr = fs.readFileSync(jsonPath, 'utf8'); } catch(e) { alert('파일 읽기 실패: ' + e.message); return; }
+                var btn = document.getElementById('ppt-marker-insert-btn');
+                btn.textContent = '삽입 중...';
+                btn.disabled = true;
+                csInterface.evalScript('$._PPP_.addMarkersFromJson(' + JSON.stringify(jsonStr) + ')', function(res) {
+                    btn.textContent = '📌 마커 일괄 삽입';
+                    btn.disabled = false;
+                    var result;
+                    try { result = JSON.parse(res); } catch(e) { result = { ok: false, error: res }; }
+                    if (result && result.ok) {
+                        alert('✅ 마커 ' + result.inserted + '개 삽입 완료' + (result.failed > 0 ? '\n⚠️ 실패: ' + result.failed + '개' : ''));
+                    } else {
+                        alert('❌ 마커 삽입 실패: ' + (result ? result.error : res));
+                    }
+                });
+            };
+
+        })();
+    </script>
+</body>
+
+</html>
